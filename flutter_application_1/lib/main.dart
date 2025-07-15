@@ -51,13 +51,13 @@ class _LoginPageState extends State<LoginPage> {
     if (response.success && response.result != null) {
       final role = response.result.get<String>('role');
       if (role == 'admin') {
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const AdminDashboard(currentIndex: 0)));
-      } else if (role == 'teacher') {
         Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-                builder: (_) => const TeacherDashboard(currentIndex: 1)));
+                builder: (_) => const AdminDashboard(currentIndex: 0)));
+      } else if (role == 'teacher') {
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const TeacherDashboard()));
       } else {
         Navigator.pushReplacement(
             context,
@@ -90,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: Icon(Icons.school, color: Colors.white, size: 32),
                 ),
                 const SizedBox(width: 12),
-                Text('Columbia University',
+                Text('Assalam School',
                     style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -233,7 +233,7 @@ class _SignupPageState extends State<SignupPage> {
                   child: Icon(Icons.school, color: Colors.white, size: 32),
                 ),
                 const SizedBox(width: 12),
-                Text('Columbia University',
+                Text('Assalam School',
                     style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -322,14 +322,21 @@ class _SignupPageState extends State<SignupPage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       onPressed: signupUser,
                       child:
                           const Text('Sign Up', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Go Back to Login'),
                     ),
                   ),
                   if (errorMessage.isNotEmpty)
@@ -374,6 +381,7 @@ class ModernDashboard extends StatefulWidget {
   final List<Map<String, String>> items;
   final List<Widget>? actions;
   final int currentIndex;
+  final Widget? customTeacherList;
   const ModernDashboard({
     super.key,
     required this.title,
@@ -383,6 +391,7 @@ class ModernDashboard extends StatefulWidget {
     required this.items,
     this.actions,
     this.currentIndex = 0,
+    this.customTeacherList,
   });
 
   @override
@@ -413,7 +422,7 @@ class _ModernDashboardState extends State<ModernDashboard> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => const TeacherDashboard(currentIndex: 1),
+          builder: (_) => const TeacherDashboard(),
         ),
       );
     } else if (index == 2) {
@@ -453,8 +462,8 @@ class _ModernDashboardState extends State<ModernDashboard> {
       ),
       body: SafeArea(
         child: ListView(
-          padding:
-              const EdgeInsets.fromLTRB(16, 16, 16, kBottomNavigationBarHeight + 17),
+          padding: const EdgeInsets.fromLTRB(
+              16, 16, 16, kBottomNavigationBarHeight + 17),
           children: [
             Text(widget.subtitle,
                 style:
@@ -493,99 +502,70 @@ class _ModernDashboardState extends State<ModernDashboard> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text('The campus star',
-                style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Teachers list',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 100,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: widget.users.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, i) {
-                  final user = widget.users[i];
-                  return SizedBox(
-                    width: 80,
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          backgroundImage: NetworkImage(user['avatar'] ?? ''),
-                          radius: 24,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(user['name'] ?? '',
-                            style: const TextStyle(fontSize: 12),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1),
-                        ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(60, 24),
-                              padding: EdgeInsets.zero),
-                          child: const Text('Follow',
-                              style: TextStyle(fontSize: 10)),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
+            widget.customTeacherList ?? SizedBox.shrink(),
             const SizedBox(height: 24),
-            const Text('Hot food',
-                style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 140,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: widget.items.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, i) {
-                  final item = widget.items[i];
-                  return Container(
-                    width: 120,
-                    constraints: const BoxConstraints(maxWidth: 140),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(color: Colors.grey.shade200, blurRadius: 6)
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              topRight: Radius.circular(16)),
-                          child: Image.network(item['image'] ?? '',
-                              height: 60, width: 120, fit: BoxFit.cover),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(item['title'] ?? '',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text(item['desc'] ?? '',
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.grey),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+            // School Data Section
+            const SizedBox(height: 32),
+            Text('School Data',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+            const SizedBox(height: 16),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.3,
+              children: [
+                _schoolDataCard(
+                  icon: Icons.class_,
+                  title: 'Class',
+                  description: 'View all classes',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ClassListScreen()),
+                    );
+                  },
+                ),
+                _schoolDataCard(
+                  icon: Icons.person,
+                  title: 'Student',
+                  description: 'View all students',
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Student card clicked')),
+                    );
+                  },
+                ),
+                _schoolDataCard(
+                  icon: Icons.grade,
+                  title: 'Exam Result',
+                  description: 'View exam results',
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Exam Result card clicked')),
+                    );
+                  },
+                ),
+                _schoolDataCard(
+                  icon: Icons.assignment_ind,
+                  title: 'Enrolments',
+                  description: 'Assign students to classes',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AssignStudentToClassScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),
@@ -606,10 +586,82 @@ class _ModernDashboardState extends State<ModernDashboard> {
       ),
     );
   }
+
+  Widget _schoolDataCard({
+    required IconData icon,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6)],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 40, color: Colors.blue),
+            const SizedBox(height: 12),
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(description,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  String? name;
+  String? username;
+  String? photoUrl;
+  bool loading = true;
+  String error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserInfo();
+  }
+
+  Future<void> _fetchUserInfo() async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    final user = await ParseUser.currentUser();
+    if (user != null) {
+      setState(() {
+        name = user.get<String>('name') ?? user.username ?? '';
+        username = user.username ?? '';
+        photoUrl = user.get<String>('photo');
+        loading = false;
+      });
+    } else {
+      setState(() {
+        error = 'Failed to fetch user info.';
+        loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -642,79 +694,95 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 16),
-          Center(
-            child: Column(
-              children: [
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundImage: NetworkImage(
-                      'https://randomuser.me/api/portraits/men/1.jpg'),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : error.isNotEmpty
+              ? Center(
+                  child: Text(error, style: const TextStyle(color: Colors.red)))
+              : Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundImage: (photoUrl != null &&
+                                    photoUrl!.isNotEmpty)
+                                ? NetworkImage(photoUrl!)
+                                : const NetworkImage(
+                                    'https://randomuser.me/api/portraits/men/1.jpg'),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(name ?? '',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 20)),
+                          Text('@${username ?? ''}',
+                              style: const TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 32, vertical: 8),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          const EditProfileScreen()));
+                            },
+                            child: const Text('Edit Profile'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.grey.shade200, blurRadius: 12)
+                          ],
+                        ),
+                        child: ListView(
+                          children: [
+                            _settingsTile(Icons.favorite_border, 'Favorites'),
+                            _settingsTile(Icons.download_outlined, 'Downloads'),
+                            _settingsTile(Icons.language, 'Language'),
+                            _settingsTile(
+                                Icons.location_on_outlined, 'Location'),
+                            _settingsTile(
+                                Icons.subscriptions_outlined, 'Subscription'),
+                            _settingsTile(
+                                Icons.bug_report_outlined, 'Clear Crash'),
+                            _settingsTile(Icons.history, 'Clear History'),
+                            const Divider(),
+                            ListTile(
+                              leading:
+                                  const Icon(Icons.logout, color: Colors.red),
+                              title: const Text('Logout',
+                                  style: TextStyle(color: Colors.red)),
+                              onTap: () {
+                                Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const LoginPage()));
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                const Text('Ekeke Theophilus',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-                const Text('@Theographic',
-                    style: TextStyle(color: Colors.grey)),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const EditProfileScreen()));
-                  },
-                  child: const Text('Edit Profile'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(color: Colors.grey.shade200, blurRadius: 12)
-                ],
-              ),
-              child: ListView(
-                children: [
-                  _settingsTile(Icons.favorite_border, 'Favorites'),
-                  _settingsTile(Icons.download_outlined, 'Downloads'),
-                  _settingsTile(Icons.language, 'Language'),
-                  _settingsTile(Icons.location_on_outlined, 'Location'),
-                  _settingsTile(Icons.subscriptions_outlined, 'Subscription'),
-                  _settingsTile(Icons.bug_report_outlined, 'Clear Crash'),
-                  _settingsTile(Icons.history, 'Clear History'),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.red),
-                    title: const Text('Logout',
-                        style: TextStyle(color: Colors.red)),
-                    onTap: () {
-                      Navigator.pushReplacement(context,
-                          MaterialPageRoute(builder: (_) => const LoginPage()));
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -729,8 +797,136 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-class EditProfileScreen extends StatelessWidget {
+class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
+
+  @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  File? imageFile;
+  String? photoUrl;
+  bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    setState(() => loading = true);
+    final user = await ParseUser.currentUser();
+    if (user != null) {
+      setState(() {
+        nameController.text = user.get<String>('name') ?? '';
+        emailController.text = user.emailAddress ?? '';
+        usernameController.text = user.username ?? '';
+        passwordController.text = '';
+        phoneController.text = user.get<String>('phoneNumber') ?? '';
+        photoUrl = user.get<String>('photo');
+        loading = false;
+      });
+    } else {
+      setState(() => loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to fetch user info.')),
+      );
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> _uploadImage(File file) async {
+    final parseFile = ParseFile(file);
+    final response = await parseFile.save();
+    if (response.success && response.result != null) {
+      return parseFile.url;
+    }
+    return null;
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() => loading = true);
+    final user = await ParseUser.currentUser();
+    if (user != null) {
+      String? uploadedPhotoUrl = photoUrl;
+      if (imageFile != null) {
+        uploadedPhotoUrl = await _uploadImage(imageFile!);
+      }
+      user.set('name', nameController.text.trim());
+      user.emailAddress = emailController.text.trim();
+      user.username = usernameController.text.trim();
+      if (passwordController.text.isNotEmpty) {
+        user.password = passwordController.text;
+      }
+      user.set('phoneNumber', phoneController.text.trim());
+      user.set('photo', uploadedPhotoUrl ?? '');
+      final response = await user.save();
+      setState(() => loading = false);
+      if (response.success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully!')),
+          );
+          Navigator.pop(context);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Failed to update profile: \\${response.error?.message ?? 'Unknown error'}')),
+          );
+        }
+      }
+    } else {
+      setState(() => loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No user found.')),
+      );
+    }
+  }
+
+  Widget _profileField(String label, TextEditingController controller,
+      {bool isPassword = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          obscureText: isPassword,
+          decoration: InputDecoration(
+            hintText: label,
+            suffixIcon: isPassword ? const Icon(Icons.visibility_off) : null,
+            filled: true,
+            fillColor: Colors.grey[100],
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -749,60 +945,183 @@ class EditProfileScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.check, color: Colors.black),
-            onPressed: () {},
+            onPressed: loading ? null : _saveProfile,
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          const Center(
-            child: CircleAvatar(
-              radius: 40,
-              backgroundImage:
-                  NetworkImage('https://randomuser.me/api/portraits/men/1.jpg'),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                Center(
+                  child: GestureDetector(
+                    onTap: _pickImage,
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.grey[200],
+                      backgroundImage: imageFile != null
+                          ? FileImage(imageFile!)
+                          : (photoUrl != null && photoUrl!.isNotEmpty)
+                              ? NetworkImage(photoUrl!)
+                              : const NetworkImage(
+                                      'https://randomuser.me/api/portraits/men/1.jpg')
+                                  as ImageProvider,
+                      child: imageFile == null &&
+                              (photoUrl == null || photoUrl!.isEmpty)
+                          ? const Icon(Icons.person,
+                              size: 40, color: Colors.grey)
+                          : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _profileField('Name', nameController),
+                _profileField('Email address', emailController),
+                _profileField('User name', usernameController),
+                _profileField('Password', passwordController, isPassword: true),
+                _profileField('Phone number', phoneController),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    onPressed: loading ? null : _saveProfile,
+                    child: loading
+                        ? const CircularProgressIndicator()
+                        : const Text('Save',
+                            style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
-          _profileField('Name', 'Ekeke Theophilus'),
-          _profileField('Email address', 'samsontheophilus32@gmail.com'),
-          _profileField('User name', '@theographic'),
-          _profileField('Password', '********', isPassword: true),
-          _profileField('User name', '+234 9050053441'),
-        ],
-      ),
-    );
-  }
-
-  Widget _profileField(String label, String value, {bool isPassword = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 8),
-        TextField(
-          enabled: false,
-          obscureText: isPassword,
-          decoration: InputDecoration(
-            hintText: value,
-            suffixIcon: isPassword ? const Icon(Icons.visibility_off) : null,
-            filled: true,
-            fillColor: Colors.grey[100],
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none),
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
     );
   }
 }
 
-class AdminDashboard extends StatelessWidget {
+class AdminDashboard extends StatefulWidget {
   final int currentIndex;
   const AdminDashboard({super.key, this.currentIndex = 0});
+
+  @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  List<ParseObject> teachers = [];
+  bool loading = true;
+  String error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTeachers();
+  }
+
+  Future<void> _fetchTeachers() async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    final query = QueryBuilder<ParseObject>(ParseObject('Teacher'));
+    final response = await query.query();
+    if (response.success && response.results != null) {
+      setState(() {
+        teachers = response.results!.cast<ParseObject>();
+        loading = false;
+      });
+    } else {
+      setState(() {
+        error = 'Failed to fetch teachers.';
+        loading = false;
+      });
+    }
+  }
+
+  Widget _teacherListWidget() {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (error.isNotEmpty) {
+      return Center(
+          child: Text(error, style: const TextStyle(color: Colors.red)));
+    }
+    if (teachers.isEmpty) {
+      return const Center(child: Text('No teachers found.'));
+    }
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: teachers.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final teacher = teachers[index];
+          final name = teacher.get<String>('fullName') ?? '';
+          final photoUrl = teacher.get<String>('photo');
+          final subject = teacher.get<String>('subject') ?? '';
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      TeacherInformationScreen(objectId: teacher.objectId!),
+                ),
+              );
+            },
+            child: Card(
+              child: IntrinsicWidth(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: (photoUrl != null &&
+                                photoUrl.isNotEmpty)
+                            ? NetworkImage(photoUrl)
+                            : const NetworkImage(
+                                'https://randomuser.me/api/portraits/men/1.jpg'),
+                        radius: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2),
+                            Text('Subject: $subject',
+                                style: const TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ModernDashboard(
@@ -814,20 +1133,7 @@ class AdminDashboard extends StatelessWidget {
         {'title': 'Club activities'},
         {'title': 'The lost and found'},
       ],
-      users: const [
-        {
-          'name': 'Timothy White',
-          'avatar': 'https://randomuser.me/api/portraits/men/1.jpg'
-        },
-        {
-          'name': 'Anthony Clark',
-          'avatar': 'https://randomuser.me/api/portraits/men/2.jpg'
-        },
-        {
-          'name': 'James',
-          'avatar': 'https://randomuser.me/api/portraits/men/3.jpg'
-        },
-      ],
+      users: const [],
       items: const [
         {
           'title': 'Barbecue',
@@ -841,12 +1147,7 @@ class AdminDashboard extends StatelessWidget {
           'image':
               'https://images.unsplash.com/photo-1464306076886-debede6b2b47'
         },
-        {
-          'title': 'Spaghetti',
-          'desc': '32 Reviews',
-          'image':
-              'https://images.unsplash.com/photo-1519864600265-abb224a0e99c'
-        },
+        {'title': 'Spaghetti', 'desc': '32 Reviews', 'image': ''},
       ],
       actions: [
         IconButton(
@@ -857,69 +1158,160 @@ class AdminDashboard extends StatelessWidget {
           },
         ),
       ],
-      currentIndex: currentIndex,
+      currentIndex: widget.currentIndex,
+      customTeacherList: _teacherListWidget(),
     );
   }
 }
 
-class TeacherDashboard extends StatelessWidget {
-  final int currentIndex;
-  const TeacherDashboard({super.key, this.currentIndex = 1});
+class TeacherDashboard extends StatefulWidget {
+  const TeacherDashboard({super.key});
+
+  @override
+  State<TeacherDashboard> createState() => _TeacherDashboardState();
+}
+
+class _TeacherDashboardState extends State<TeacherDashboard> {
+  bool loading = true;
+  String error = '';
+  List<ParseObject> teachers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTeachers();
+  }
+
+  Future<void> _fetchTeachers() async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    final query = QueryBuilder<ParseObject>(ParseObject('Teacher'));
+    final response = await query.query();
+    if (response.success && response.results != null) {
+      setState(() {
+        teachers = response.results!.cast<ParseObject>();
+        loading = false;
+      });
+    } else {
+      setState(() {
+        error = 'Failed to fetch teachers.';
+        loading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ModernDashboard(
-      title: 'Assalam School',
-      subtitle: 'Teacher circle',
-      activities: const [
-        {'title': 'My lectures'},
-        {'title': 'Assignments'},
-        {'title': 'Student feedback'},
-        {'title': 'Events'},
-      ],
-      users: const [
-        {
-          'name': 'Alice',
-          'avatar': 'https://randomuser.me/api/portraits/women/1.jpg'
-        },
-        {
-          'name': 'Bob',
-          'avatar': 'https://randomuser.me/api/portraits/men/4.jpg'
-        },
-        {
-          'name': 'Carol',
-          'avatar': 'https://randomuser.me/api/portraits/women/2.jpg'
-        },
-      ],
-      items: const [
-        {
-          'title': 'Math Book',
-          'desc': 'New edition',
-          'image':
-              'https://images.unsplash.com/photo-1512820790803-83ca734da794'
-        },
-        {
-          'title': 'Physics Kit',
-          'desc': 'Lab tools',
-          'image':
-              'https://images.unsplash.com/photo-1465101046530-73398c7f28ca'
-        },
-        {
-          'title': 'Chemistry Set',
-          'desc': 'For experiments',
-          'image':
-              'https://images.unsplash.com/photo-1509228468518-180dd4864904'
-        },
-      ],
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings, color: Colors.black),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F7FB),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()));
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AdminDashboard(currentIndex: 0),
+              ),
+            );
           },
         ),
-      ],
-      currentIndex: currentIndex,
+        title: const Text('Teachers', style: TextStyle(color: Colors.black)),
+        centerTitle: true,
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : error.isNotEmpty
+              ? Center(
+                  child: Text(error, style: const TextStyle(color: Colors.red)))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: teachers.length,
+                  itemBuilder: (context, index) {
+                    final teacher = teachers[index];
+                    final name = teacher.get<String>('fullName') ?? '';
+                    final photoUrl = teacher.get<String>('photo');
+                    final subject = teacher.get<String>('subject') ?? '';
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: (photoUrl != null &&
+                                  photoUrl.isNotEmpty)
+                              ? NetworkImage(photoUrl)
+                              : const NetworkImage(
+                                  'https://randomuser.me/api/portraits/men/1.jpg'),
+                        ),
+                        title: Text(name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Subject: $subject'),
+                          ],
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TeacherInformationScreen(
+                                  objectId: teacher.objectId!),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AddTeacherInformationScreen(),
+            ),
+          );
+        },
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'Add Teacher',
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Teachers'),
+          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Students'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: 'Settings'),
+        ],
+        currentIndex: 1,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AdminDashboard(currentIndex: 0)));
+          } else if (index == 1) {
+            // Already on Teachers
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const StudentDashboard(currentIndex: 2)));
+          } else if (index == 3) {
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()));
+          }
+        },
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+      ),
     );
   }
 }
@@ -970,7 +1362,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Failed to fetch students: ${response.error?.message ?? 'Unknown error'}')),
+              content: Text(
+                  'Failed to fetch students: ${response.error?.message ?? 'Unknown error'}')),
         );
       }
     }
@@ -1040,12 +1433,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('All Students',
-                    style: TextStyle(color: Colors.grey)),
+                Text('All Students', style: TextStyle(color: Colors.grey)),
                 Row(
                   children: [
-                    Text('Sort by time',
-                        style: TextStyle(color: Colors.grey)),
+                    Text('Sort by time', style: TextStyle(color: Colors.grey)),
                     Icon(Icons.keyboard_arrow_down, color: Colors.grey),
                   ],
                 ),
@@ -1082,31 +1473,23 @@ class _StudentDashboardState extends State<StudentDashboard> {
                           icon:
                               const Icon(Icons.more_horiz, color: Colors.blue),
                           onPressed: () {
-                            final studentId = student.objectId;
-                            if (studentId != null) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => EditStudentInformationScreen(
-                                      objectId: studentId),
-                                ),
-                              );
-                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'Edit screen is currently unavailable.')),
+                            );
                           },
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         onTap: () {
-                          final studentId = student.objectId;
-                          if (studentId != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => StudentInformationScreen(
-                                    objectId: studentId),
-                              ),
-                            );
-                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentInformationScreen(
+                                  objectId: student.objectId!),
+                            ),
+                          );
                         },
                       );
                     },
@@ -1124,10 +1507,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
           );
         },
         backgroundColor: Colors.blue,
-        elevation: 4,
         child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'Add Student',
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
@@ -1144,10 +1526,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 MaterialPageRoute(
                     builder: (_) => const AdminDashboard(currentIndex: 0)));
           } else if (index == 1) {
-            Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const TeacherDashboard(currentIndex: 1)));
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (_) => const TeacherDashboard()));
           } else if (index == 2) {
             Navigator.pushReplacement(
                 context,
@@ -1170,10 +1550,12 @@ class AddStudentInformationScreen extends StatefulWidget {
   const AddStudentInformationScreen({super.key});
 
   @override
-  State<AddStudentInformationScreen> createState() => _AddStudentInformationScreenState();
+  State<AddStudentInformationScreen> createState() =>
+      _AddStudentInformationScreenState();
 }
 
-class _AddStudentInformationScreenState extends State<AddStudentInformationScreen> {
+class _AddStudentInformationScreenState
+    extends State<AddStudentInformationScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController gradeController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
@@ -1229,7 +1611,8 @@ class _AddStudentInformationScreenState extends State<AddStudentInformationScree
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Failed to add student: ${response.error?.message ?? 'Unknown error'}')),
+              content: Text(
+                  'Failed to add student: ${response.error?.message ?? 'Unknown error'}')),
         );
       }
     }
@@ -1298,17 +1681,18 @@ class _AddStudentInformationScreenState extends State<AddStudentInformationScree
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.black, width: 4),
                       ),
-                      child: imageFile != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Image.file(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: imageFile != null
+                            ? Image.file(
                                 imageFile!,
                                 fit: BoxFit.cover,
                                 width: 260,
                                 height: 260,
-                              ),
-                            )
-                          : Icon(Icons.person, size: 120, color: Colors.grey[400]),
+                              )
+                            : Icon(Icons.person,
+                                size: 120, color: Colors.grey[400]),
+                      ),
                     ),
                     Positioned(
                       bottom: 16,
@@ -1329,18 +1713,25 @@ class _AddStudentInformationScreenState extends State<AddStudentInformationScree
               const SizedBox(height: 32),
               Text(
                 nameController.text.isEmpty ? 'Name' : nameController.text,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 32),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 32),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text('ID 00000000', style: TextStyle(color: Colors.grey, fontSize: 18)),
+              const Text('ID 00000000',
+                  style: TextStyle(color: Colors.grey, fontSize: 18)),
               const SizedBox(height: 32),
-              _inputField(icon: Icons.person, label: 'Name', controller: nameController),
+              _inputField(
+                  icon: Icons.person,
+                  label: 'Name',
+                  controller: nameController),
               _inputField(
                 icon: Icons.cake,
                 label: 'Date of birth',
                 controller: TextEditingController(
-                  text: dateOfBirth == null ? '' : dateOfBirth!.toLocal().toString().split(' ')[0],
+                  text: dateOfBirth == null
+                      ? ''
+                      : dateOfBirth!.toLocal().toString().split(' ')[0],
                 ),
                 readOnly: true,
                 onTap: () async {
@@ -1357,10 +1748,22 @@ class _AddStudentInformationScreenState extends State<AddStudentInformationScree
                   }
                 },
               ),
-              _inputField(icon: Icons.school, label: 'Grade', controller: gradeController),
-              _inputField(icon: Icons.home, label: 'Addrees', controller: addressController),
-              _inputField(icon: Icons.phone, label: 'Phone number', controller: phoneController),
-              _inputField(icon: Icons.info, label: 'Study Status', controller: studyStatusController),
+              _inputField(
+                  icon: Icons.school,
+                  label: 'Grade',
+                  controller: gradeController),
+              _inputField(
+                  icon: Icons.home,
+                  label: 'Addrees',
+                  controller: addressController),
+              _inputField(
+                  icon: Icons.phone,
+                  label: 'Phone number',
+                  controller: phoneController),
+              _inputField(
+                  icon: Icons.info,
+                  label: 'Study Status',
+                  controller: studyStatusController),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -1378,14 +1781,19 @@ class _AddStudentInformationScreenState extends State<AddStudentInformationScree
                   onPressed: loading ? null : _saveStudent,
                   child: Ink(
                     decoration: const BoxDecoration(
-                      gradient: LinearGradient(colors: [Color(0xFF00B4DB), Color(0xFF0083B0)]),
+                      gradient: LinearGradient(
+                          colors: [Color(0xFF00B4DB), Color(0xFF0083B0)]),
                       borderRadius: BorderRadius.all(Radius.circular(32)),
                     ),
                     child: Container(
                       alignment: Alignment.center,
                       child: loading
                           ? const CircularProgressIndicator()
-                          : const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
+                          : const Text('Save',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 22)),
                     ),
                   ),
                 ),
@@ -1399,32 +1807,35 @@ class _AddStudentInformationScreenState extends State<AddStudentInformationScree
   }
 }
 
-class EditStudentInformationScreen extends StatefulWidget {
+// --- StudentInformationScreen ---
+class StudentInformationScreen extends StatefulWidget {
   final String objectId;
-  const EditStudentInformationScreen({super.key, required this.objectId});
+  const StudentInformationScreen({super.key, required this.objectId});
+
   @override
-  State<EditStudentInformationScreen> createState() => _EditStudentInformationScreenState();
+  State<StudentInformationScreen> createState() =>
+      _StudentInformationScreenState();
 }
 
-class _EditStudentInformationScreenState extends State<EditStudentInformationScreen> {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController gradeController = TextEditingController();
-  final TextEditingController addressController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController studyStatusController = TextEditingController();
-  DateTime? dateOfBirth;
-  File? imageFile;
+class _StudentInformationScreenState extends State<StudentInformationScreen> {
+  TextEditingController nameController = TextEditingController();
+  TextEditingController addressController = TextEditingController();
+  TextEditingController gradeController = TextEditingController();
+  TextEditingController studyStatusController = TextEditingController();
+  TextEditingController attendanController = TextEditingController();
+  TextEditingController dobController = TextEditingController();
+  String gender = 'Male';
   String? photoUrl;
+  DateTime? dateOfBirth;
   bool loading = false;
-  bool deleting = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchStudent();
+    _fetchStudentData();
   }
 
-  Future<void> _fetchStudent() async {
+  Future<void> _fetchStudentData() async {
     setState(() => loading = true);
     final query = QueryBuilder<ParseObject>(ParseObject('Student'))
       ..whereEqualTo('objectId', widget.objectId);
@@ -1432,20 +1843,380 @@ class _EditStudentInformationScreenState extends State<EditStudentInformationScr
     if (response.success &&
         response.results != null &&
         response.results!.isNotEmpty) {
-      final student = response.results!.first as ParseObject;
-      nameController.text = student.get<String>('name') ?? '';
-      gradeController.text = student.get<String>('grade') ?? '';
-      addressController.text = student.get<String>('address') ?? '';
-      phoneController.text = student.get<String>('phoneNumber') ?? '';
-      studyStatusController.text = student.get<String>('studyStatus') ?? '';
-      photoUrl = student.get<String>('photo');
-      final dobStr = student.get<String>('dateOfBirth');
-      if (dobStr != null && dobStr.isNotEmpty) {
-        dateOfBirth = DateTime.tryParse(dobStr);
+      final student = response.results!.first;
+      setState(() {
+        nameController.text = student.get<String>('name') ?? '';
+        addressController.text = student.get<String>('address') ?? '';
+        gradeController.text = student.get<String>('grade') ?? '';
+        studyStatusController.text = student.get<String>('studyStatus') ?? '';
+        attendanController.text = student.get<String>('attendan') ?? '';
+        gender = student.get<String>('gender') ?? 'Male';
+        photoUrl = student.get<String>('photo');
+        final dobStr = student.get<String>('dateOfBirth');
+        if (dobStr != null && dobStr.isNotEmpty) {
+          dateOfBirth = DateTime.tryParse(dobStr);
+          dobController.text = dobStr.split('T').first;
+        }
+        loading = false;
+      });
+    } else {
+      setState(() => loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Failed to fetch student: ${response.error?.message ?? 'Unknown error'}')),
+      );
+    }
+  }
+
+  int _calculateAge(DateTime? dob) {
+    if (dob == null) return 0;
+    final now = DateTime.now();
+    int age = now.year - dob.year;
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  Future<void> _selectDate() async {
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: dateOfBirth ?? DateTime(2000, 1, 1),
+      firstDate: DateTime(1990),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        dateOfBirth = picked;
+        dobController.text = picked.toIso8601String().split('T').first;
+      });
+    }
+  }
+
+  Future<void> _saveStudentEdits() async {
+    setState(() => loading = true);
+    final student = ParseObject('Student')..objectId = widget.objectId;
+    student
+      ..set('name', nameController.text.trim())
+      ..set('address', addressController.text.trim())
+      ..set('grade', gradeController.text.trim())
+      ..set('studyStatus', studyStatusController.text.trim())
+      ..set('attendan', attendanController.text.trim())
+      ..set('gender', gender)
+      ..set('dateOfBirth', dateOfBirth?.toIso8601String());
+    final response = await student.save();
+    if (response.success) {
+      // Update all Enrolment records for this student with the new name
+      final enrolQuery = QueryBuilder<ParseObject>(ParseObject('Enrolment'))
+        ..whereEqualTo(
+            'student', ParseObject('Student')..objectId = widget.objectId);
+      final enrolResponse = await enrolQuery.query();
+      if (enrolResponse.success && enrolResponse.results != null) {
+        for (final enrol in enrolResponse.results!) {
+          enrol.set('studentName', nameController.text.trim());
+          await enrol.save();
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Student updated successfully!')),
+        );
+        Navigator.pop(context);
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to update student: ' +
+                  (response.error?.message ?? 'Unknown error'))),
+        );
       }
     }
     setState(() => loading = false);
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F7FB),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF8B7EDC)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Student Information',
+          style: TextStyle(
+            color: Color(0xFF8B7EDC),
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      width: 160,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.black12, width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: photoUrl != null && photoUrl!.isNotEmpty
+                            ? Image.network(photoUrl!, fit: BoxFit.cover)
+                            : Icon(Icons.person,
+                                size: 80, color: Colors.grey[400]),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _editField('Name', nameController),
+                  _editField('Address', addressController),
+                  _genderDropdown(),
+                  _editField('Date of Birth', dobController, isDate: true),
+                  _infoCard(
+                      'Age',
+                      dateOfBirth != null
+                          ? _calculateAge(dateOfBirth).toString()
+                          : ''),
+                  _editField('Grade', gradeController),
+                  _editField('Study Status', studyStatusController),
+                  _editField('Attendan', attendanController),
+                  const SizedBox(height: 24),
+                  _saveButton(),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _editField(String label, TextEditingController controller,
+      {bool isDate = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        readOnly: isDate,
+        onTap: isDate ? _selectDate : null,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.black),
+          filled: true,
+          fillColor: const Color(0xFFEDEDED),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _genderDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: DropdownButtonFormField<String>(
+        value: gender,
+        items: const [
+          DropdownMenuItem(value: 'Male', child: Text('Male')),
+          DropdownMenuItem(value: 'Female', child: Text('Female')),
+          DropdownMenuItem(value: 'Other', child: Text('Other')),
+        ],
+        onChanged: (val) {
+          setState(() {
+            gender = val ?? 'Male';
+          });
+        },
+        decoration: InputDecoration(
+          labelText: 'Gender',
+          filled: true,
+          fillColor: const Color(0xFFEDEDED),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoCard(String label, String value) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F7FB),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          const SizedBox(width: 12),
+          Text(value,
+              style: const TextStyle(
+                  color: Color(0xFF8B7EDC),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
+        ],
+      ),
+    );
+  }
+
+  Widget _saveButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        onPressed: loading ? null : _saveStudentEdits,
+        child: loading
+            ? const CircularProgressIndicator()
+            : const Text('Save', style: TextStyle(fontSize: 16)),
+      ),
+    );
+  }
+}
+
+// --- TeacherInformationScreen ---
+class TeacherInformationScreen extends StatefulWidget {
+  final String objectId;
+  const TeacherInformationScreen({super.key, required this.objectId});
+
+  @override
+  State<TeacherInformationScreen> createState() =>
+      _TeacherInformationScreenState();
+}
+
+class _TeacherInformationScreenState extends State<TeacherInformationScreen> {
+  bool loading = true;
+  String error = '';
+  String? name;
+  String? photoUrl;
+  String? email;
+  String? username;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTeacherInfo();
+  }
+
+  Future<void> _fetchTeacherInfo() async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    final query = QueryBuilder<ParseObject>(ParseObject('Teacher'))
+      ..whereEqualTo('objectId', widget.objectId);
+    final response = await query.query();
+    if (response.success &&
+        response.results != null &&
+        response.results!.isNotEmpty) {
+      final teacher = response.results!.first as ParseObject;
+      setState(() {
+        name = teacher.get<String>('name') ?? '';
+        photoUrl = teacher.get<String>('photo');
+        email = teacher.get<String>('email') ?? '';
+        username = teacher.get<String>('username') ?? '';
+        loading = false;
+      });
+    } else {
+      setState(() {
+        error = 'Failed to fetch teacher info.';
+        loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F7FB),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Teacher Information',
+            style: TextStyle(color: Colors.black)),
+        centerTitle: true,
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : error.isNotEmpty
+              ? Center(
+                  child: Text(error, style: const TextStyle(color: Colors.red)))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 48,
+                        backgroundImage: (photoUrl != null &&
+                                photoUrl!.isNotEmpty)
+                            ? NetworkImage(photoUrl!)
+                            : const NetworkImage(
+                                'https://randomuser.me/api/portraits/men/1.jpg'),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(name ?? '',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 22)),
+                      const SizedBox(height: 8),
+                      Text('@${username ?? ''}',
+                          style: const TextStyle(
+                              color: Colors.grey, fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text(email ?? '',
+                          style: const TextStyle(
+                              color: Colors.black, fontSize: 16)),
+                    ],
+                  ),
+                ),
+    );
+  }
+}
+
+Future<void> createSampleTeachers() async {
+  // Function cleared as requested.
+}
+
+class AddTeacherInformationScreen extends StatefulWidget {
+  const AddTeacherInformationScreen({super.key});
+
+  @override
+  State<AddTeacherInformationScreen> createState() =>
+      _AddTeacherInformationScreenState();
+}
+
+class _AddTeacherInformationScreenState
+    extends State<AddTeacherInformationScreen> {
+  final TextEditingController fullNameController = TextEditingController();
+  final TextEditingController subjectController = TextEditingController();
+  String gender = 'Male';
+  File? imageFile;
+  bool loading = false;
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -1466,27 +2237,23 @@ class _EditStudentInformationScreenState extends State<EditStudentInformationScr
     return null;
   }
 
-  Future<void> _saveStudent() async {
+  Future<void> _saveTeacher() async {
     setState(() => loading = true);
-    String? newPhotoUrl = photoUrl;
+    String? photoUrl;
     if (imageFile != null) {
-      newPhotoUrl = await _uploadImage(imageFile!);
+      photoUrl = await _uploadImage(imageFile!);
     }
-    final student = ParseObject('Student')
-      ..objectId = widget.objectId
-      ..set('name', nameController.text.trim())
-      ..set('grade', gradeController.text.trim())
-      ..set('address', addressController.text.trim())
-      ..set('phoneNumber', phoneController.text.trim())
-      ..set('studyStatus', studyStatusController.text.trim())
-      ..set('dateOfBirth', dateOfBirth?.toIso8601String())
-      ..set('photo', newPhotoUrl ?? '');
-    final response = await student.save();
+    final teacher = ParseObject('Teacher')
+      ..set('fullName', fullNameController.text.trim())
+      ..set('gender', gender)
+      ..set('subject', subjectController.text.trim())
+      ..set('photo', photoUrl ?? '');
+    final response = await teacher.save();
     setState(() => loading = false);
     if (response.success) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Student updated successfully!')),
+          const SnackBar(content: Text('Teacher added successfully!')),
         );
         Navigator.pop(context);
       }
@@ -1494,81 +2261,21 @@ class _EditStudentInformationScreenState extends State<EditStudentInformationScr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Failed to update student: ${response.error?.message ?? 'Unknown error'}')),
+              content: Text(
+                  'Failed to add teacher: \\${response.error?.message ?? 'Unknown error'}')),
         );
       }
     }
-  }
-
-  Future<void> _deleteStudent() async {
-    setState(() => deleting = true);
-    final student = ParseObject('Student')..objectId = widget.objectId;
-    final response = await student.delete();
-    setState(() => deleting = false);
-    if (response.success) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Student deleted successfully!')),
-        );
-        Navigator.pop(context);
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to delete student: ${response.error?.message ?? 'Unknown error'}')),
-        );
-      }
-    }
-  }
-
-  Future<void> _onEditImage() async {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Change Image'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await _pickImage();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Delete Image',
-                    style: TextStyle(color: Colors.red)),
-                onTap: () {
-                  setState(() {
-                    imageFile = null;
-                    photoUrl = null;
-                  });
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Widget _inputField(
       {required IconData icon,
       required String label,
-      required TextEditingController controller,
-      bool readOnly = false,
-      VoidCallback? onTap}) {
+      required TextEditingController controller}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
         controller: controller,
-        readOnly: readOnly,
-        onTap: onTap,
         decoration: InputDecoration(
           prefixIcon: Container(
             margin: const EdgeInsets.all(8),
@@ -1598,461 +2305,649 @@ class _EditStudentInformationScreenState extends State<EditStudentInformationScr
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Edit Student', style: TextStyle(color: Colors.black)),
+        title: const Text('Add Teacher', style: TextStyle(color: Colors.black)),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: deleting ? null : _deleteStudent,
-            tooltip: 'Delete',
-          ),
-        ],
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: _onEditImage,
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    width: 260,
-                                    height: 260,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.black, width: 4),
-                                    ),
-                                    child: imageFile != null
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(16),
-                                            child: Image.file(
-                                              imageFile!,
-                                              width: 260,
-                                              height: 260,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          )
-                                        : Icon(Icons.person, size: 120, color: Colors.grey[400]),
-                                  ),
-                                  Positioned(
-                                    bottom: 16,
-                                    right: 16,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.black, width: 2),
-                                      ),
-                                      padding: const EdgeInsets.all(8),
-                                      child: const Icon(Icons.edit, color: Colors.black),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              nameController.text.isEmpty ? 'Name' : nameController.text,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 28),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text('ID ${widget.objectId}', style: const TextStyle(color: Colors.grey, fontSize: 16)),
-                            const SizedBox(height: 24),
-                            _inputField(icon: Icons.person, label: 'Name', controller: nameController),
-                            _inputField(
-                              icon: Icons.cake,
-                              label: 'Date of birth',
-                              controller: TextEditingController(
-                                text: dateOfBirth == null ? '' : dateOfBirth!.toLocal().toString().split(' ')[0],
-                              ),
-                              readOnly: true,
-                              onTap: () async {
-                                final picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: dateOfBirth ?? DateTime(2005, 1, 1),
-                                  firstDate: DateTime(1990),
-                                  lastDate: DateTime.now(),
-                                );
-                                if (picked != null) {
-                                  setState(() {
-                                    dateOfBirth = picked;
-                                  });
-                                }
-                              },
-                            ),
-                            _inputField(icon: Icons.school, label: 'Grade', controller: gradeController),
-                            _inputField(icon: Icons.home, label: 'Address', controller: addressController),
-                            _inputField(icon: Icons.phone, label: 'Phone number', controller: phoneController),
-                            _inputField(icon: Icons.info, label: 'Study Status', controller: studyStatusController),
-                            const SizedBox(height: 32),
-                            Container(
-                              width: double.infinity,
-                              height: 54,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(colors: [Color(0xFF00B4DB), Color(0xFF0083B0)]),
-                                borderRadius: BorderRadius.circular(32),
-                                border: Border.all(color: Colors.cyan, width: 2),
-                              ),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(32),
-                                  onTap: loading ? null : _saveStudent,
-                                  child: Center(
-                                    child: loading
-                                        ? const CircularProgressIndicator()
-                                        : const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 180,
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.black, width: 3),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: imageFile != null
+                            ? Image.file(imageFile!, fit: BoxFit.cover)
+                            : const Icon(Icons.person,
+                                size: 80, color: Colors.grey),
                       ),
                     ),
-                  );
-                },
+                    Positioned(
+                      bottom: 12,
+                      right: 12,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black, width: 2),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(Icons.edit, color: Colors.black),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
+              const SizedBox(height: 24),
+              _inputField(
+                  icon: Icons.person,
+                  label: 'Full Name',
+                  controller: fullNameController),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: DropdownButtonFormField<String>(
+                  value: gender,
+                  items: const [
+                    DropdownMenuItem(value: 'Male', child: Text('Male')),
+                    DropdownMenuItem(value: 'Female', child: Text('Female')),
+                    DropdownMenuItem(value: 'Other', child: Text('Other')),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      gender = val ?? 'Male';
+                    });
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Gender',
+                    filled: true,
+                    fillColor: const Color(0xFFEDEDED),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              _inputField(
+                  icon: Icons.book,
+                  label: 'Subject',
+                  controller: subjectController),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  onPressed: loading ? null : _saveTeacher,
+                  child: loading
+                      ? const CircularProgressIndicator()
+                      : const Text('Save',
+                          style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
-class StudentInformationScreen extends StatefulWidget {
-  final String objectId;
-  const StudentInformationScreen({super.key, required this.objectId});
+class ClassListScreen extends StatefulWidget {
+  const ClassListScreen({super.key});
+
   @override
-  State<StudentInformationScreen> createState() => _StudentInformationScreenState();
+  State<ClassListScreen> createState() => _ClassListScreenState();
 }
 
-class _StudentInformationScreenState extends State<StudentInformationScreen> {
-  String name = '';
-  String grade = '';
-  String address = '';
-  String phoneNumber = '';
-  String studyStatus = '';
-  String? photoUrl;
-  DateTime? dateOfBirth;
+class _ClassListScreenState extends State<ClassListScreen> {
   bool loading = true;
-  String gender = 'Female'; // Placeholder, replace with actual data if available
-  int absentCount = 5; // Placeholder, replace with actual data if available
+  String error = '';
+  List<ParseObject> classes = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchStudent();
+    _fetchClasses();
   }
 
-  Future<void> _fetchStudent() async {
-    final query = QueryBuilder<ParseObject>(ParseObject('Student'))
-      ..whereEqualTo('objectId', widget.objectId);
+  Future<void> _fetchClasses() async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    final query = QueryBuilder<ParseObject>(ParseObject('Class'));
     final response = await query.query();
-    if (response.success &&
-        response.results != null &&
-        response.results!.isNotEmpty) {
-      final student = response.results!.first as ParseObject;
+    if (response.success && response.results != null) {
       setState(() {
-        name = student.get<String>('name') ?? '';
-        grade = student.get<String>('grade') ?? '';
-        address = student.get<String>('address') ?? '';
-        phoneNumber = student.get<String>('phoneNumber') ?? '';
-        studyStatus = student.get<String>('studyStatus') ?? '';
-        photoUrl = student.get<String>('photo');
-        final dobStr = student.get<String>('dateOfBirth');
-        if (dobStr != null && dobStr.isNotEmpty) {
-          dateOfBirth = DateTime.tryParse(dobStr);
-        }
+        classes = response.results!.cast<ParseObject>();
         loading = false;
       });
     } else {
-      setState(() => loading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to fetch student: ${response.error?.message ?? 'Unknown error'}')),
-        );
-      }
+      setState(() {
+        error = 'Failed to fetch classes.';
+        loading = false;
+      });
     }
-  }
-
-  String getAgeText() {
-    if (dateOfBirth == null) return '';
-    final now = DateTime.now();
-    final years = now.year - dateOfBirth!.year;
-    return '$years years';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      appBar: AppBar(
+        title: const Text('Class List'),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              child: Column(
-                children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.black),
-                          onPressed: () => Navigator.pop(context),
+          : error.isNotEmpty
+              ? Center(
+                  child: Text(error, style: const TextStyle(color: Colors.red)))
+              : GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.3,
+                  ),
+                  itemCount: classes.length,
+                  itemBuilder: (context, index) {
+                    final classObj = classes[index];
+                    final className =
+                        classObj.get<String>('classname') ?? 'Class';
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ClassEnrolmentScreen(classObj: classObj),
+                          ),
+                        );
+                      },
+                      child: Card(
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Student Information',
-                          style: TextStyle(
-                            color: Color(0xFF8B7EDC),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text(
+                              className,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 18),
+                            ),
                           ),
                         ),
-                        const Spacer(),
-                        const Icon(Icons.signal_cellular_alt, color: Colors.black54, size: 20),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.wifi, color: Colors.black54, size: 20),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.battery_full, color: Colors.black54, size: 20),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        child: Column(
-                          children: [
-                            // Card with landscape image and carousel
-                            Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                children: [
-                                  Container(
-                                    width: double.infinity,
-                                    height: 160,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      color: Colors.white,
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(16),
-                                          child: Image.network(
-                                            'https://img.freepik.com/free-vector/landscape-background-illustration_53876-107151.jpg',
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 160,
-                                          ),
-                                        ),
-                                        const Positioned(
-                                          left: 12,
-                                          top: 60,
-                                          child: CircleAvatar(
-                                            backgroundColor: Colors.white,
-                                            child: Icon(Icons.chevron_left, color: Color(0xFF8B7EDC)),
-                                          ),
-                                        ),
-                                        const Positioned(
-                                          right: 12,
-                                          top: 60,
-                                          child: CircleAvatar(
-                                            backgroundColor: Colors.white,
-                                            child: Icon(Icons.chevron_right, color: Color(0xFF8B7EDC)),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFF8B7EDC),
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.grey,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.grey,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  // Student Info Card
-                                  Container(
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                name.isEmpty ? 'Name' : name,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 22,
-                                                ),
-                                              ),
-                                            ),
-                                            Container(
-                                              width: 28,
-                                              height: 28,
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xFF8B7EDC),
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.location_on, color: Color(0xFF8B7EDC), size: 18),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              address.isEmpty ? 'Address' : address,
-                                              style: const TextStyle(color: Colors.grey, fontSize: 16),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            _infoBox('Gender', gender, highlight: true),
-                                            _infoBox('Age', getAgeText(), highlight: true),
-                                            _infoBox('Grade', grade, highlight: true),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 16),
-                                        const Text('Study Status',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16)),
-                                        Text(
-                                          studyStatus.isEmpty ? 'Normal' : studyStatus,
-                                          style: const TextStyle(color: Colors.grey, fontSize: 16),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Text('Attendance',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16)),
-                                        Text(
-                                          'Absent $absentCount times',
-                                          style: const TextStyle(color: Colors.grey, fontSize: 16),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF8B7EDC),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                onPressed: () {},
-                                child: const Text(
-                                  'Report',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final TextEditingController controller = TextEditingController();
+          final result = await showDialog<String>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Create New Class'),
+              content: TextField(
+                controller: controller,
+                decoration: const InputDecoration(hintText: 'Enter class name'),
               ),
-            );
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () =>
+                      Navigator.pop(context, controller.text.trim()),
+                  child: const Text('Create'),
+                ),
+              ],
+            ),
+          );
+          if (result != null && result.isNotEmpty) {
+            setState(() => loading = true);
+            final newClass = ParseObject('Class')..set('classname', result);
+            final response = await newClass.save();
+            if (response.success) {
+              await _fetchClasses();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Class created successfully!')),
+                );
+              }
+            } else {
+              setState(() => loading = false);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text('Failed to create class: ' +
+                          (response.error?.message ?? 'Unknown error'))),
+                );
+              }
+            }
+          }
+        },
+        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: Colors.blue,
+        tooltip: 'Create Class',
+      ),
+    );
+  }
+}
+
+class AssignStudentToClassScreen extends StatefulWidget {
+  const AssignStudentToClassScreen({super.key});
+
+  @override
+  State<AssignStudentToClassScreen> createState() =>
+      _AssignStudentToClassScreenState();
+}
+
+class _AssignStudentToClassScreenState
+    extends State<AssignStudentToClassScreen> {
+  List<ParseObject> classes = [];
+  List<ParseObject> students = [];
+  List<String> selectedStudentIds = [];
+  String? selectedClassId;
+  bool loadingClasses = true;
+  bool loadingStudents = false;
+  String error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchClasses();
   }
 
-  Widget _infoBox(String label, String value, {bool highlight = false}) {
-    return Container(
-      width: 80,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF6F7FB),
-        borderRadius: BorderRadius.circular(12),
+  Future<void> _fetchClasses() async {
+    setState(() {
+      loadingClasses = true;
+      error = '';
+    });
+    final query = QueryBuilder<ParseObject>(ParseObject('Class'));
+    final response = await query.query();
+    if (response.success && response.results != null) {
+      setState(() {
+        classes = response.results!.cast<ParseObject>();
+        loadingClasses = false;
+      });
+    } else {
+      setState(() {
+        error = 'Failed to fetch classes.';
+        loadingClasses = false;
+      });
+    }
+  }
+
+  Future<void> _fetchStudents() async {
+    setState(() {
+      loadingStudents = true;
+      error = '';
+    });
+    final query = QueryBuilder<ParseObject>(ParseObject('Student'));
+    final response = await query.query();
+    if (response.success && response.results != null) {
+      setState(() {
+        students = response.results!.cast<ParseObject>();
+        loadingStudents = false;
+      });
+    } else {
+      setState(() {
+        error = 'Failed to fetch students.';
+        loadingStudents = false;
+      });
+    }
+  }
+
+  Future<void> _assignStudentsToClass() async {
+    if (selectedClassId == null || selectedStudentIds.isEmpty) return;
+    setState(() {
+      loadingStudents = true;
+    });
+    for (final studentId in selectedStudentIds) {
+      // Fetch student name
+      final studentQuery = QueryBuilder<ParseObject>(ParseObject('Student'))
+        ..whereEqualTo('objectId', studentId);
+      final studentResponse = await studentQuery.query();
+      String studentName = '';
+      if (studentResponse.success &&
+          studentResponse.results != null &&
+          studentResponse.results!.isNotEmpty) {
+        studentName = studentResponse.results!.first.get<String>('name') ?? '';
+      }
+      final enrolment = ParseObject('Enrolment')
+        ..set('class', ParseObject('Class')..objectId = selectedClassId)
+        ..set('student', ParseObject('Student')..objectId = studentId)
+        ..set('studentName', studentName);
+      await enrolment.save();
+    }
+    setState(() {
+      loadingStudents = false;
+      selectedStudentIds.clear();
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Students assigned successfully!')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Assign Student to Class'),
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
+      body: loadingClasses
+          ? const Center(child: CircularProgressIndicator())
+          : error.isNotEmpty
+              ? Center(
+                  child: Text(error, style: const TextStyle(color: Colors.red)))
+              : selectedClassId == null
+                  ? _buildClassSelection()
+                  : _buildStudentSelection(),
+    );
+  }
+
+  Widget _buildClassSelection() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value.isEmpty ? '-' : value,
-            style: TextStyle(
-              color: highlight ? const Color(0xFF8B7EDC) : Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
+          const Text('Select a Class',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 16),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.3,
+              children: classes.map((cls) {
+                final className = cls.get<String>('classname') ?? '';
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedClassId = cls.objectId;
+                    });
+                    _fetchStudents();
+                  },
+                  child: Card(
+                    color: Colors.blue[50],
+                    child: Center(
+                      child: Text(className,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildStudentSelection() {
+    return loadingStudents
+        ? const Center(child: CircularProgressIndicator())
+        : Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        setState(() {
+                          selectedClassId = null;
+                          selectedStudentIds.clear();
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Select Students',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 18)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: students.length,
+                    itemBuilder: (context, i) {
+                      final student = students[i];
+                      final name = student.get<String>('name') ?? '';
+                      final id = student.objectId!;
+                      return CheckboxListTile(
+                        title: Text(name),
+                        value: selectedStudentIds.contains(id),
+                        onChanged: (checked) {
+                          setState(() {
+                            if (checked == true) {
+                              selectedStudentIds.add(id);
+                            } else {
+                              selectedStudentIds.remove(id);
+                            }
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    onPressed: selectedStudentIds.isEmpty
+                        ? null
+                        : _assignStudentsToClass,
+                    child: const Text('Assign to Class',
+                        style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          );
+  }
+}
+
+class ClassEnrolmentScreen extends StatefulWidget {
+  final ParseObject classObj;
+  const ClassEnrolmentScreen({super.key, required this.classObj});
+
+  @override
+  State<ClassEnrolmentScreen> createState() => _ClassEnrolmentScreenState();
+}
+
+class _ClassEnrolmentScreenState extends State<ClassEnrolmentScreen> {
+  bool loading = true;
+  String error = '';
+  List<_EnrolledStudent> enrolledStudents = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEnrolments();
+  }
+
+  Future<void> _fetchEnrolments() async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    final enrolQuery = QueryBuilder<ParseObject>(ParseObject('Enrolment'))
+      ..whereEqualTo(
+          'class', ParseObject('Class')..objectId = widget.classObj.objectId);
+    final enrolResponse = await enrolQuery.query();
+    if (enrolResponse.success && enrolResponse.results != null) {
+      // Collect all studentIds from enrolments
+      List<_EnrolledStudent> students = [];
+      List<String> studentIds = [];
+      Map<String, String> enrolmentIdByStudentId = {};
+      for (final enrol in enrolResponse.results!) {
+        final studentPointer = enrol.get<ParseObject>('student');
+        String? studentId = studentPointer?.objectId;
+        String? enrolmentId = enrol.objectId;
+        if (studentId != null && enrolmentId != null) {
+          studentIds.add(studentId);
+          enrolmentIdByStudentId[studentId] = enrolmentId;
+        }
+      }
+      // Batch fetch all students
+      if (studentIds.isNotEmpty) {
+        final studentQuery = QueryBuilder<ParseObject>(ParseObject('Student'))
+          ..whereContainedIn('objectId', studentIds);
+        final studentResponse = await studentQuery.query();
+        if (studentResponse.success && studentResponse.results != null) {
+          for (final studentObj in studentResponse.results!) {
+            final name = studentObj.get<String>('name') ?? '';
+            final studentId = studentObj.objectId;
+            final enrolmentId = enrolmentIdByStudentId[studentId];
+            if (name.isNotEmpty && studentId != null && enrolmentId != null) {
+              students.add(_EnrolledStudent(
+                name: name,
+                studentId: studentId,
+                enrolmentId: enrolmentId,
+              ));
+            }
+          }
+        }
+      }
+      setState(() {
+        enrolledStudents = students;
+        loading = false;
+      });
+    } else {
+      setState(() {
+        error = 'Failed to fetch enrolments.';
+        loading = false;
+      });
+    }
+  }
+
+  Future<void> _removeStudent(String enrolmentId) async {
+    setState(() {
+      loading = true;
+    });
+    final enrolment = ParseObject('Enrolment')..objectId = enrolmentId;
+    final response = await enrolment.delete();
+    if (response.success) {
+      await _fetchEnrolments();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Student removed from class.')),
+        );
+      }
+    } else {
+      setState(() {
+        loading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to remove student: ' +
+                  (response.error?.message ?? 'Unknown error'))),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final className = widget.classObj.get<String>('classname') ?? 'Class';
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(className),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : error.isNotEmpty
+              ? Center(
+                  child: Text(error, style: const TextStyle(color: Colors.red)))
+              : enrolledStudents.isEmpty
+                  ? const Center(child: Text('No students enrolled.'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: enrolledStudents.length,
+                      itemBuilder: (context, i) {
+                        final student = enrolledStudents[i];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: ListTile(
+                            leading:
+                                const Icon(Icons.person, color: Colors.blue),
+                            title: Text(student.name),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.remove_circle,
+                                  color: Colors.red),
+                              tooltip: 'Remove from class',
+                              onPressed: loading
+                                  ? null
+                                  : () => _removeStudent(student.enrolmentId),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+    );
+  }
+}
+
+class _EnrolledStudent {
+  final String name;
+  final String studentId;
+  final String enrolmentId;
+  _EnrolledStudent(
+      {required this.name, required this.studentId, required this.enrolmentId});
 }
