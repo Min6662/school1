@@ -2637,19 +2637,15 @@ class _AssignStudentToClassScreenState
       loadingStudents = true;
     });
     for (final studentId in selectedStudentIds) {
-      // Fetch student name
-      final studentQuery = QueryBuilder<ParseObject>(ParseObject('Student'))
-        ..whereEqualTo('objectId', studentId);
-      final studentResponse = await studentQuery.query();
-      String studentName = '';
-      if (studentResponse.success &&
-          studentResponse.results != null &&
-          studentResponse.results!.isNotEmpty) {
-        studentName = studentResponse.results!.first.get<String>('name') ?? '';
-      }
+      // Find student in the loaded students list
+      final studentObj = students.firstWhere(
+        (s) => s.objectId == studentId,
+        orElse: () => ParseObject('Student'),
+      );
+      final studentName = studentObj.get<String>('name') ?? '';
       final enrolment = ParseObject('Enrolment')
-        ..set('class', ParseObject('Class')..objectId = selectedClassId)
         ..set('student', ParseObject('Student')..objectId = studentId)
+        ..set('class', ParseObject('Class')..objectId = selectedClassId)
         ..set('studentName', studentName);
       await enrolment.save();
     }
@@ -2659,7 +2655,7 @@ class _AssignStudentToClassScreenState
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Students assigned successfully!')),
+        const SnackBar(content: Text('Students assigned to class!')),
       );
     }
   }
