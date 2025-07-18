@@ -1,12 +1,19 @@
 class SchoolClass {
-  final String id;
+  final String objectId;
   final String name;
-  final List<String> studentIds;
-  final List<String> teacherIds;
+  final String? description;
 
-  SchoolClass(
-      {required this.id,
-      required this.name,
-      required this.studentIds,
-      required this.teacherIds});
+  SchoolClass({
+    required this.objectId,
+    required this.name,
+    this.description,
+  });
+
+  factory SchoolClass.fromParseObject(Map<String, dynamic> data) {
+    return SchoolClass(
+      objectId: data['objectId'] ?? '',
+      name: data['classname'] ?? '',
+      description: data['description'],
+    );
+  }
 }

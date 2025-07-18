@@ -1,16 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import '../screens/admin_dashboard.dart';
+import '../screens/teacher_dashboard.dart';
+import '../screens/student_dashboard.dart';
+import '../screens/signup_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  String _selectedRole = 'Student';
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  String errorMessage = '';
+
+  Future<void> loginUser() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+    final user = ParseUser(email, password, email);
+    final response = await user.login();
+    if (response.success && response.result != null) {
+      final role = response.result.get<String>('role');
+      if (role == 'admin') {
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const AdminDashboard(currentIndex: 0)));
+      } else if (role == 'teacher') {
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const TeacherDashboard()));
+      } else {
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const StudentDashboard(currentIndex: 2)));
+      }
+    } else {
+      setState(() {
+        errorMessage = response.error?.message ?? 'Login failed';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +60,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 32),
                   const CircleAvatar(
                     radius: 36,
-                    backgroundImage: AssetImage(
-                        'assets/university_logo.png'), // Add your logo asset
+                    backgroundImage: AssetImage('assets/university_logo.png'),
                     backgroundColor: Colors.transparent,
                   ),
                   const SizedBox(height: 16),
@@ -51,7 +83,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: Column(
                         children: [
                           TextField(
-                            controller: _emailController,
+                            controller: emailController,
                             decoration: InputDecoration(
                               labelText: 'Email',
                               border: OutlineInputBorder(
@@ -61,7 +93,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 16),
                           TextField(
-                            controller: _passwordController,
+                            controller: passwordController,
                             obscureText: true,
                             decoration: InputDecoration(
                               labelText: 'Password',
@@ -69,28 +101,6 @@ class _LoginPageState extends State<LoginPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text('Role:'),
-                              const SizedBox(width: 12),
-                              DropdownButton<String>(
-                                value: _selectedRole,
-                                items: ['Admin', 'Teacher', 'Student']
-                                    .map((role) => DropdownMenuItem(
-                                          value: role,
-                                          child: Text(role),
-                                        ))
-                                    .toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedRole = value!;
-                                  });
-                                },
-                              ),
-                            ],
                           ),
                           const SizedBox(height: 24),
                           SizedBox(
@@ -104,9 +114,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 backgroundColor: Colors.blue[700],
                               ),
-                              onPressed: () {
-                                // TODO: Implement login logic
-                              },
+                              onPressed: loginUser,
                               child: const Text(
                                 'Login',
                                 style: TextStyle(
@@ -114,6 +122,21 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                           ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const SignupPage()));
+                            },
+                            child: const Text("Don't have an account? Sign Up"),
+                          ),
+                          if (errorMessage.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(errorMessage,
+                                  style: const TextStyle(color: Colors.red)),
+                            ),
                         ],
                       ),
                     ),
