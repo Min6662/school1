@@ -5,9 +5,9 @@ import 'settings_screen.dart';
 import 'teacher_dashboard.dart';
 import 'student_dashboard.dart';
 import '../views/class_list.dart';
-import '../views/student_list.dart';
 import '../screens/assign_student_to_class_screen.dart';
 import 'student_attendance_screen.dart';
+import 'teacher_qr_scan_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   final int currentIndex;
@@ -187,7 +187,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       onStudentTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const StudentList()),
+          MaterialPageRoute(
+              builder: (_) => const StudentDashboard(currentIndex: 2)),
         );
       },
       onExamResultTap: () {
@@ -203,9 +204,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
       },
       onQRScanTap: () {
-        // TODO: Implement QR scan navigation
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('QR Scan card clicked')),
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TeacherQRScanScreen()),
         );
       },
       onStudentAttendanceTap: () {

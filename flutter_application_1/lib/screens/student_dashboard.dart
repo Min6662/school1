@@ -4,7 +4,6 @@ import 'add_student_information_screen.dart';
 import 'admin_dashboard.dart';
 import 'teacher_dashboard.dart';
 import 'settings_screen.dart';
-import 'student_information_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
   final int currentIndex;
@@ -113,32 +112,27 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.separated(
                     itemCount: students.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, __) => const SizedBox(height: 4),
                     itemBuilder: (context, i) {
                       final student = students[i];
                       final name = student.get<String>('name') ?? '';
-                      final grade = student.get<String>('grade') ?? '';
-                      final photoUrl = student.get<String>('photo');
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: (photoUrl != null &&
-                                  photoUrl.isNotEmpty)
-                              ? NetworkImage(photoUrl)
-                              : const NetworkImage(
-                                  'https://randomuser.me/api/portraits/men/1.jpg'),
-                        ),
-                        title: Text(name),
-                        subtitle: Text('Grade: $grade'),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => StudentInformationScreen(
-                                objectId: student.objectId!,
-                              ),
-                            ),
-                          );
-                        },
+                      final years = student.get<int>('yearsOfExperience') ?? 0;
+                      final rating = student.get<double>('rating') ?? 4.5;
+                      final ratingCount =
+                          student.get<int>('ratingCount') ?? 100;
+                      final hourlyRate =
+                          student.get<String>('hourlyRate') ?? '20/hr';
+                      final photoUrl = student.get<String>('photo') ??
+                          'https://randomuser.me/api/portraits/men/1.jpg';
+                      return TeacherCard(
+                        name: name,
+                        role: 'Student Of Assalam',
+                        years: years,
+                        rating: rating,
+                        ratingCount: ratingCount,
+                        hourlyRate: hourlyRate,
+                        imageUrl: photoUrl,
+                        onAdd: () {},
                       );
                     },
                   ),
@@ -186,6 +180,108 @@ class _StudentDashboardState extends State<StudentDashboard> {
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
+      ),
+    );
+  }
+}
+
+class TeacherCard extends StatelessWidget {
+  final String name;
+  final String role;
+  final int years;
+  final double rating;
+  final int ratingCount;
+  final String hourlyRate;
+  final String imageUrl;
+  final VoidCallback? onAdd;
+  const TeacherCard({
+    super.key,
+    required this.name,
+    required this.role,
+    required this.years,
+    required this.rating,
+    required this.ratingCount,
+    required this.hourlyRate,
+    required this.imageUrl,
+    this.onAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 3,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl,
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 60,
+                  height: 60,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.person, size: 32, color: Colors.grey),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.work, size: 16, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text(role,
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                  Text(name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('$years years of experience',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: Colors.orange, size: 16),
+                      Text('${rating.toStringAsFixed(1)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(' ($ratingCount)',
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey)),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(hourlyRate,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline, color: Colors.orange),
+              onPressed: onAdd,
+            ),
+          ],
+        ),
       ),
     );
   }

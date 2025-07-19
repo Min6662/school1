@@ -5,6 +5,9 @@ class Teacher {
   final String gender;
   final String? photoUrl;
   final int yearsOfExperience;
+  final double rating;
+  final int ratingCount;
+  final double hourlyRate;
 
   Teacher({
     required this.objectId,
@@ -13,6 +16,9 @@ class Teacher {
     required this.gender,
     this.photoUrl,
     this.yearsOfExperience = 0,
+    this.rating = 0.0,
+    this.ratingCount = 0,
+    this.hourlyRate = 0.0,
   });
 
   factory Teacher.fromParseObject(Map<String, dynamic> data) {
@@ -23,6 +29,9 @@ class Teacher {
       gender: data['gender'] ?? '',
       photoUrl: data['photo'],
       yearsOfExperience: data['yearsOfExperience'] ?? 0,
+      rating: (data['rating'] ?? 0.0).toDouble(),
+      ratingCount: data['ratingCount'] ?? 0,
+      hourlyRate: (data['hourlyRate'] ?? 0.0).toDouble(),
     );
   }
 }

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import '../models/teacher.dart';
+import '../views/teacher_card.dart' as views;
 import 'admin_dashboard.dart';
 import 'settings_screen.dart';
+import 'add_teacher_information_screen.dart';
+import 'student_dashboard.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -13,7 +17,7 @@ class TeacherDashboard extends StatefulWidget {
 class _TeacherDashboardState extends State<TeacherDashboard> {
   bool loading = true;
   String error = '';
-  List<ParseObject> teachers = [];
+  List<Teacher> teachers = [];
 
   @override
   void initState() {
@@ -30,7 +34,19 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     final response = await query.query();
     if (response.success && response.results != null) {
       setState(() {
-        teachers = response.results!.cast<ParseObject>();
+        teachers = response.results!.map<Teacher>((obj) {
+          return Teacher(
+            objectId: obj.get<String>('objectId') ?? '',
+            fullName: obj.get<String>('fullName') ?? '',
+            subject: obj.get<String>('subject') ?? '',
+            gender: obj.get<String>('gender') ?? '',
+            photoUrl: obj.get<String>('photo'),
+            yearsOfExperience: obj.get<int>('yearsOfExperience') ?? 0,
+            rating: (obj.get<num>('rating') ?? 0.0).toDouble(),
+            ratingCount: obj.get<int>('ratingCount') ?? 0,
+            hourlyRate: (obj.get<num>('hourlyRate') ?? 0.0).toDouble(),
+          );
+        }).toList();
         loading = false;
       });
     } else {
@@ -72,41 +88,32 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   itemCount: teachers.length,
                   itemBuilder: (context, index) {
                     final teacher = teachers[index];
-                    final name = teacher.get<String>('fullName') ?? '';
-                    final photoUrl = teacher.get<String>('photo');
-                    final subject = teacher.get<String>('subject') ?? '';
-                    final gender = teacher.get<String>('gender') ?? '';
-                    final years = teacher.get<int>('yearsOfExperience') ?? 0;
-                    return Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage:
-                              (photoUrl != null && photoUrl.isNotEmpty)
-                                  ? NetworkImage(photoUrl)
-                                  : null,
-                          child: (photoUrl == null || photoUrl.isEmpty)
-                              ? const Icon(Icons.person)
-                              : null,
-                        ),
-                        title: Text(name,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Subject: $subject'),
-                            Text('Gender: $gender'),
-                            Text('Experience: $years years'),
-                          ],
-                        ),
-                        isThreeLine: true,
-                      ),
+                    return views.TeacherCard(
+                      name: teacher.fullName,
+                      photoUrl: teacher.photoUrl,
+                      yearsOfExperience: teacher.yearsOfExperience,
+                      rating: teacher.rating,
+                      ratingCount: teacher.ratingCount,
+                      hourlyRate: teacher.hourlyRate,
+                      onAdd: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AddTeacherInformationScreen(),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Implement add teacher logic
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AddTeacherInformationScreen(),
+            ),
+          );
         },
         backgroundColor: Colors.blue,
         tooltip: 'Add Teacher',
@@ -130,7 +137,12 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           } else if (index == 1) {
             // Already on Teachers
           } else if (index == 2) {
-            // TODO: Implement navigation to student dashboard
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const StudentDashboard(currentIndex: 2),
+              ),
+            );
           } else if (index == 3) {
             Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const SettingsScreen()));

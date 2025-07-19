@@ -98,7 +98,8 @@ class _ModernDashboardState extends State<ModernDashboard> {
     // Navigate to StudentListScreen when Students tab is tapped
     if (index == 2) {
       // Use root navigator to ensure navigation works in all dashboard contexts
-      Navigator.of(context, rootNavigator: true).pushNamed('/studentList');
+      Navigator.of(context, rootNavigator: true)
+          .pushNamed('/studentList'); // This will now go to StudentDashboard
     }
   }
 

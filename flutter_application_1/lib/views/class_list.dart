@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import '../screens/class_qr_code_screen.dart';
 
 class ClassList extends StatefulWidget {
   const ClassList({super.key});
@@ -112,6 +113,20 @@ class _ClassListState extends State<ClassList> {
         title: const Text('Class List'),
         backgroundColor: Colors.blue[900],
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code, color: Colors.white),
+            tooltip: 'Class QR Codes',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ClassQRCodeScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
