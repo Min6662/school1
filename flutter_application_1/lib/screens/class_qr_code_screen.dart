@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:hive/hive.dart';
 
 class ClassQRCodeScreen extends StatefulWidget {
   const ClassQRCodeScreen({super.key});
@@ -14,7 +15,7 @@ class ClassQRCodeScreen extends StatefulWidget {
 }
 
 class _ClassQRCodeScreenState extends State<ClassQRCodeScreen> {
-  List<ParseObject> classes = [];
+  List<Map<String, dynamic>> cachedClasses = [];
   String? selectedClassId;
   bool loading = true;
   String error = '';
@@ -23,7 +24,46 @@ class _ClassQRCodeScreenState extends State<ClassQRCodeScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchClasses();
+    _loadCachedClasses();
+  }
+
+  Future<void> _loadCachedClasses() async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    try {
+      final box = await Hive.openBox('classBox');
+      final List<dynamic>? cached = box.get('classes') as List<dynamic>?;
+      if (cached != null && cached.isNotEmpty) {
+        cachedClasses = List<Map<String, dynamic>>.from(cached);
+        setState(() {
+          loading = false;
+        });
+      } else {
+        // If cache is empty, fetch from Parse and save to Hive
+        await _fetchClasses();
+        // Try loading again from cache after fetch
+        final List<dynamic>? cachedAfterFetch =
+            box.get('classes') as List<dynamic>?;
+        if (cachedAfterFetch != null && cachedAfterFetch.isNotEmpty) {
+          cachedClasses = List<Map<String, dynamic>>.from(cachedAfterFetch);
+          setState(() {
+            loading = false;
+          });
+        } else {
+          setState(() {
+            error = 'No classes found.';
+            loading = false;
+          });
+        }
+      }
+    } catch (e) {
+      setState(() {
+        error = 'Failed to load cached classes.';
+        loading = false;
+      });
+    }
   }
 
   Future<void> _fetchClasses() async {
@@ -34,8 +74,17 @@ class _ClassQRCodeScreenState extends State<ClassQRCodeScreen> {
     final query = QueryBuilder<ParseObject>(ParseObject('Class'));
     final response = await query.query();
     if (response.success && response.results != null) {
+      final List<ParseObject> parseClasses =
+          List<ParseObject>.from(response.results!);
+      cachedClasses = parseClasses
+          .map((cls) => {
+                'objectId': cls.get<String>('objectId'),
+                'classname': cls.get<String>('classname'),
+              })
+          .toList();
+      final box = await Hive.openBox('classBox');
+      await box.put('classes', cachedClasses);
       setState(() {
-        classes = List<ParseObject>.from(response.results!);
         loading = false;
       });
     } else {
@@ -46,12 +95,27 @@ class _ClassQRCodeScreenState extends State<ClassQRCodeScreen> {
     }
   }
 
+  Future<void> _refreshClasses() async {
+    final box = await Hive.openBox('classBox');
+    await box.delete('classes');
+    await _fetchClasses();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Class QR Code'),
         backgroundColor: Colors.blue,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Classes',
+            onPressed: () async {
+              await _refreshClasses();
+            },
+          ),
+        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -70,10 +134,9 @@ class _ClassQRCodeScreenState extends State<ClassQRCodeScreen> {
                       DropdownButton<String>(
                         value: selectedClassId,
                         hint: const Text('Choose a class'),
-                        items: classes.map((cls) {
-                          final id = cls.get<String>('objectId') ?? '';
-                          final name =
-                              cls.get<String>('classname') ?? 'Unnamed';
+                        items: cachedClasses.map((cls) {
+                          final id = cls['objectId'] ?? '';
+                          final name = cls['classname'] ?? 'Unnamed';
                           return DropdownMenuItem<String>(
                             value: id,
                             child: Text(name),
@@ -102,11 +165,11 @@ class _ClassQRCodeScreenState extends State<ClassQRCodeScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              classes
-                                      .firstWhere((cls) =>
-                                          cls.get<String>('objectId') ==
-                                          selectedClassId)
-                                      .get<String>('classname') ??
+                              cachedClasses.firstWhere(
+                                    (cls) => cls['objectId'] == selectedClassId,
+                                    orElse: () =>
+                                        <String, dynamic>{'classname': ''},
+                                  )['classname'] ??
                                   '',
                               style: const TextStyle(
                                   fontSize: 18, fontWeight: FontWeight.bold),

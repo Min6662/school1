@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import '../models/teacher.dart';
 import '../views/teacher_card.dart' as views;
 import 'admin_dashboard.dart';
 import 'settings_screen.dart';
 import 'add_teacher_information_screen.dart';
 import 'student_dashboard.dart';
+import '../services/class_service.dart';
+import '../services/cache_service.dart';
+import 'package:hive/hive.dart';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -18,42 +22,67 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   bool loading = true;
   String error = '';
   List<Teacher> teachers = [];
+  Map<String, Uint8List?> teacherImages = {};
 
   @override
   void initState() {
     super.initState();
-    _fetchTeachers();
+    _loadTeachers();
   }
 
-  Future<void> _fetchTeachers() async {
+  Future<void> _loadTeachers({bool forceRefresh = false}) async {
     setState(() {
       loading = true;
       error = '';
     });
-    final query = QueryBuilder<ParseObject>(ParseObject('Teacher'));
-    final response = await query.query();
-    if (response.success && response.results != null) {
+    try {
+      final teacherList = await ClassService.getTeacherList();
+      teachers =
+          teacherList.map((data) => Teacher.fromParseObject(data)).toList();
       setState(() {
-        teachers = response.results!.map<Teacher>((obj) {
-          return Teacher(
-            objectId: obj.get<String>('objectId') ?? '',
-            fullName: obj.get<String>('fullName') ?? '',
-            subject: obj.get<String>('subject') ?? '',
-            gender: obj.get<String>('gender') ?? '',
-            photoUrl: obj.get<String>('photo'),
-            yearsOfExperience: obj.get<int>('yearsOfExperience') ?? 0,
-            rating: (obj.get<num>('rating') ?? 0.0).toDouble(),
-            ratingCount: obj.get<int>('ratingCount') ?? 0,
-            hourlyRate: (obj.get<num>('hourlyRate') ?? 0.0).toDouble(),
-          );
-        }).toList();
         loading = false;
       });
+      // Load teacher images from cache or network
+      for (final teacher in teachers) {
+        _getTeacherImage(teacher.objectId, teacher.photoUrl ?? '');
+      }
+    } catch (e) {
+      setState(() {
+        error = 'Failed to load teachers: \\${e.toString()}';
+        loading = false;
+      });
+    }
+  }
+
+  Future<void> _getTeacherImage(String teacherId, String imageUrl) async {
+    print('Getting image for teacherId: $teacherId, imageUrl: $imageUrl');
+    final box = await Hive.openBox('teacherImages');
+    final cached = box.get(teacherId);
+    if (cached != null) {
+      print('Loaded image from cache for $teacherId');
+      setState(() {
+        teacherImages[teacherId] = Uint8List.fromList(List<int>.from(cached));
+      });
+      return;
+    }
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+      try {
+        final response = await http.get(Uri.parse(imageUrl));
+        print('Image download status for $teacherId: ${response.statusCode}');
+        if (response.statusCode == 200) {
+          await box.put(teacherId, response.bodyBytes);
+          setState(() {
+            teacherImages[teacherId] = response.bodyBytes;
+          });
+          print('Image cached for $teacherId');
+        } else {
+          print('Failed to download image for $teacherId');
+        }
+      } catch (e) {
+        print('Error downloading image for $teacherId: $e');
+      }
     } else {
-      setState(() {
-        error = 'Failed to fetch teachers.';
-        loading = false;
-      });
+      print('No valid image URL for $teacherId');
     }
   }
 
@@ -77,6 +106,16 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         ),
         title: const Text('Teachers', style: TextStyle(color: Colors.black)),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.blue),
+            tooltip: 'Refresh Teacher List',
+            onPressed: () async {
+              await CacheService.clearTeacherList();
+              _loadTeachers(forceRefresh: true);
+            },
+          ),
+        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -95,6 +134,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                       rating: teacher.rating,
                       ratingCount: teacher.ratingCount,
                       hourlyRate: teacher.hourlyRate,
+                      imageBytes: teacherImages[teacher.objectId],
                       onAdd: () {
                         Navigator.push(
                           context,

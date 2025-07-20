@@ -1,9 +1,12 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'add_student_information_screen.dart';
 import 'admin_dashboard.dart';
 import 'teacher_dashboard.dart';
 import 'settings_screen.dart';
+import '../services/class_service.dart';
+import 'package:hive/hive.dart';
+import 'package:http/http.dart' as http;
 
 class StudentDashboard extends StatefulWidget {
   final int currentIndex;
@@ -14,44 +17,75 @@ class StudentDashboard extends StatefulWidget {
 }
 
 class _StudentDashboardState extends State<StudentDashboard> {
-  List<ParseObject> students = [];
+  List<Map<String, dynamic>> allStudents = [];
+  List<Map<String, dynamic>> filteredStudents = [];
   bool loading = false;
   String searchQuery = '';
+  String error = '';
+
   @override
   void initState() {
     super.initState();
-    _fetchStudents();
+    _loadStudents();
   }
 
-  Future<void> _fetchStudents() async {
-    setState(() => loading = true);
-    final query = QueryBuilder<ParseObject>(ParseObject('Student'));
-    if (searchQuery.isNotEmpty) {
-      query.whereContains('name', searchQuery);
-    }
-    final response = await query.query();
-    if (response.success && response.results != null) {
+  Future<void> _loadStudents({bool forceRefresh = false}) async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    try {
+      final students =
+          await ClassService.getStudentList(forceRefresh: forceRefresh);
+      if (students.isEmpty) {
+        setState(() {
+          error = 'No students found.';
+        });
+      }
       setState(() {
-        students = List<ParseObject>.from(response.results!);
+        allStudents = students;
+        filteredStudents = _filterStudents(searchQuery);
         loading = false;
       });
-    } else {
-      setState(() => loading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Failed to fetch students: \'${response.error?.message ?? 'Unknown error'}')),
-        );
-      }
+    } catch (e) {
+      setState(() {
+        loading = false;
+        error = 'Error loading students: ${e.toString()}';
+      });
     }
+  }
+
+  List<Map<String, dynamic>> _filterStudents(String query) {
+    if (query.isEmpty) return allStudents;
+    final lower = query.toLowerCase();
+    return allStudents
+        .where((stu) => (stu['name'] ?? '').toLowerCase().contains(lower))
+        .toList();
   }
 
   void _onSearchChanged(String value) {
     setState(() {
       searchQuery = value.trim();
+      filteredStudents = _filterStudents(searchQuery);
     });
-    _fetchStudents();
+  }
+
+  Future<Uint8List?> _getStudentImage(String studentId, String imageUrl) async {
+    final box = Hive.box('studentImages');
+    final cached = box.get(studentId);
+    if (cached != null) {
+      return Uint8List.fromList(List<int>.from(cached));
+    }
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+      try {
+        final response = await http.get(Uri.parse(imageUrl));
+        if (response.statusCode == 200) {
+          await box.put(studentId, response.bodyBytes);
+          return response.bodyBytes;
+        }
+      } catch (_) {}
+    }
+    return null;
   }
 
   @override
@@ -82,7 +116,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.blue),
-            onPressed: _fetchStudents,
+            onPressed: () => _loadStudents(forceRefresh: true),
             tooltip: 'Refresh',
           ),
         ],
@@ -107,32 +141,42 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
           ),
           const SizedBox(height: 8),
+          if (error.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(error, style: const TextStyle(color: Colors.red)),
+            ),
           Expanded(
             child: loading
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.separated(
-                    itemCount: students.length,
+                    itemCount: filteredStudents.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 4),
                     itemBuilder: (context, i) {
-                      final student = students[i];
-                      final name = student.get<String>('name') ?? '';
-                      final years = student.get<int>('yearsOfExperience') ?? 0;
-                      final rating = student.get<double>('rating') ?? 4.5;
-                      final ratingCount =
-                          student.get<int>('ratingCount') ?? 100;
-                      final hourlyRate =
-                          student.get<String>('hourlyRate') ?? '20/hr';
-                      final photoUrl = student.get<String>('photo') ??
+                      final student = filteredStudents[i];
+                      final name = student['name'] ?? '';
+                      final years = student['yearsOfExperience'] ?? 0;
+                      final rating = student['rating']?.toDouble() ?? 4.5;
+                      final ratingCount = student['ratingCount'] ?? 100;
+                      final hourlyRate = student['hourlyRate'] ?? '20/hr';
+                      final photoUrl = student['photo'] ??
                           'https://randomuser.me/api/portraits/men/1.jpg';
-                      return TeacherCard(
-                        name: name,
-                        role: 'Student Of Assalam',
-                        years: years,
-                        rating: rating,
-                        ratingCount: ratingCount,
-                        hourlyRate: hourlyRate,
-                        imageUrl: photoUrl,
-                        onAdd: () {},
+                      final studentId = student['objectId'] ?? '';
+                      return FutureBuilder<Uint8List?>(
+                        future: _getStudentImage(studentId, photoUrl),
+                        builder: (context, snapshot) {
+                          return TeacherCard(
+                            name: name,
+                            role: 'Student Of Assalam',
+                            years: years,
+                            rating: rating,
+                            ratingCount: ratingCount,
+                            hourlyRate: hourlyRate,
+                            imageBytes: snapshot.data,
+                            imageUrl: photoUrl,
+                            onAdd: () {},
+                          );
+                        },
                       );
                     },
                   ),
@@ -191,8 +235,9 @@ class TeacherCard extends StatelessWidget {
   final int years;
   final double rating;
   final int ratingCount;
-  final String hourlyRate;
+  final String? hourlyRate; // Make optional for student cards
   final String imageUrl;
+  final Uint8List? imageBytes;
   final VoidCallback? onAdd;
   const TeacherCard({
     super.key,
@@ -201,8 +246,9 @@ class TeacherCard extends StatelessWidget {
     required this.years,
     required this.rating,
     required this.ratingCount,
-    required this.hourlyRate,
+    this.hourlyRate, // Optional
     required this.imageUrl,
+    this.imageBytes,
     this.onAdd,
   });
 
@@ -218,18 +264,26 @@ class TeacherCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl,
-                width: 60,
-                height: 60,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 60,
-                  height: 60,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.person, size: 32, color: Colors.grey),
-                ),
-              ),
+              child: imageBytes != null
+                  ? Image.memory(
+                      imageBytes!,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                    )
+                  : Image.network(
+                      imageUrl,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.person,
+                            size: 32, color: Colors.grey),
+                      ),
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -240,46 +294,79 @@ class TeacherCard extends StatelessWidget {
                     children: [
                       const Icon(Icons.work, size: 16, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text(role,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
+                      Flexible(
+                        child: Text(role,
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1),
+                      ),
                     ],
                   ),
                   Text(name,
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1),
                   Text('$years years of experience',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1),
                   Row(
                     children: [
-                      Icon(Icons.star, color: Colors.orange, size: 16),
+                      const Icon(Icons.star, color: Colors.orange, size: 16),
                       Text('${rating.toStringAsFixed(1)}',
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(' ($ratingCount)',
                           style: const TextStyle(
                               fontSize: 12, color: Colors.grey)),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.orange[200],
-                          borderRadius: BorderRadius.circular(8),
+                      if (hourlyRate != null) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(hourlyRate!,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1),
+                          ),
                         ),
-                        child: Text(hourlyRate,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
-                      ),
+                      ],
                     ],
                   ),
+                  // Additional student info fields (address, phone, etc.)
+                  if (imageBytes == null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            imageUrl,
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline, color: Colors.orange),
-              onPressed: onAdd,
-            ),
+            if (onAdd != null)
+              IconButton(
+                icon:
+                    const Icon(Icons.add_circle_outline, color: Colors.orange),
+                onPressed: onAdd,
+              ),
           ],
         ),
       ),

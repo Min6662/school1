@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'student_attendance_history_screen.dart';
 
 class StudentAttendanceScreen extends StatefulWidget {
@@ -28,14 +29,44 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchClasses();
+    _loadClassesInstant();
   }
 
-  Future<void> _fetchClasses() async {
+  Future<void> _loadClassesInstant() async {
+    final box = await Hive.openBox('attendanceClassList');
+    final cached = box.get('classList');
+    if (cached != null) {
+      setState(() {
+        classes = List<Map<String, dynamic>>.from(cached).map((e) {
+          final obj = ParseObject('Class')..objectId = e['objectId'];
+          obj.set('classname', e['classname']);
+          return obj;
+        }).toList();
+        loadingClasses = false;
+      });
+    }
+    _fetchClasses(forceRefresh: false); // Fetch fresh data in background
+  }
+
+  Future<void> _fetchClasses({bool forceRefresh = false}) async {
     setState(() {
       loadingClasses = true;
     });
-    // Query Class table directly
+    final box = await Hive.openBox('attendanceClassList');
+    if (!forceRefresh) {
+      final cached = box.get('classList');
+      if (cached != null) {
+        setState(() {
+          classes = List<Map<String, dynamic>>.from(cached).map((e) {
+            final obj = ParseObject('Class')..objectId = e['objectId'];
+            obj.set('classname', e['classname']);
+            return obj;
+          }).toList();
+          loadingClasses = false;
+        });
+        // Continue to fetch fresh data in background
+      }
+    }
     final query = QueryBuilder<ParseObject>(ParseObject('Class'));
     final response = await query.query();
     if (response.success && response.results != null) {
@@ -43,6 +74,15 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
         classes = response.results!.cast<ParseObject>();
         loadingClasses = false;
       });
+      await box.put(
+        'classList',
+        response.results!
+            .map((cls) => {
+                  'objectId': cls.objectId,
+                  'classname': cls.get<String>('classname') ?? '',
+                })
+            .toList(),
+      );
     } else {
       setState(() {
         loadingClasses = false;
@@ -50,10 +90,35 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
     }
   }
 
-  Future<void> _fetchStudents(String classId) async {
+  Future<void> _loadStudentsInstant(String classId) async {
+    final box = await Hive.openBox('attendanceStudents');
+    final cached = box.get(classId);
+    if (cached != null) {
+      setState(() {
+        students = List<Map<String, dynamic>>.from(cached);
+        loadingStudents = false;
+      });
+    }
+    _fetchStudents(classId,
+        forceRefresh: false); // Fetch fresh data in background
+  }
+
+  Future<void> _fetchStudents(String classId,
+      {bool forceRefresh = false}) async {
     setState(() {
       loadingStudents = true;
     });
+    final box = await Hive.openBox('attendanceStudents');
+    if (!forceRefresh) {
+      final cached = box.get(classId);
+      if (cached != null) {
+        setState(() {
+          students = List<Map<String, dynamic>>.from(cached);
+          loadingStudents = false;
+        });
+        // Continue to fetch fresh data in background
+      }
+    }
     final classPointer = ParseObject('Class')..objectId = classId;
     final enrolQuery = QueryBuilder<ParseObject>(ParseObject('Enrolment'))
       ..whereEqualTo('class', classPointer);
@@ -70,6 +135,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
         students = studentList;
         loadingStudents = false;
       });
+      await box.put(classId, studentList);
     } else {
       setState(() {
         students = [];
@@ -123,6 +189,17 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
         title: const Text('Mark Student Attendance'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.blue),
+            tooltip: 'Refresh Student List',
+            onPressed: selectedClassId == null
+                ? null
+                : () async {
+                    final box = await Hive.openBox('attendanceStudents');
+                    await box.delete(selectedClassId);
+                    _fetchStudents(selectedClassId!, forceRefresh: true);
+                  },
+          ),
+          IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'View History',
             onPressed: () {
@@ -168,7 +245,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
                       setState(() {
                         selectedClassId = val;
                       });
-                      if (val != null) _fetchStudents(val);
+                      if (val != null) _loadStudentsInstant(val);
                     },
                   ),
             const SizedBox(height: 16),

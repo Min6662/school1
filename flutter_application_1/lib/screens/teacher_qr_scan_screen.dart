@@ -45,7 +45,8 @@ class _TeacherQRScanScreenState extends State<TeacherQRScanScreen> {
         // Save attendance to Parse
         if (scanResult != null && teacherObjectId != null) {
           final attendance = ParseObject('TeacherAttendance')
-            ..set('teacherId', ParseObject('Teacher')..objectId = teacherObjectId)
+            ..set(
+                'teacherID', ParseObject('Teacher')..objectId = teacherObjectId)
             ..set('classId', ParseObject('Class')..objectId = scanResult)
             ..set('timestamp', DateTime.now().toUtc());
           final response = await attendance.save();

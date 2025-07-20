@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 
 class TeacherCard extends StatelessWidget {
   final String name;
@@ -8,6 +9,7 @@ class TeacherCard extends StatelessWidget {
   final int ratingCount;
   final double hourlyRate;
   final VoidCallback? onAdd;
+  final Uint8List? imageBytes;
 
   const TeacherCard({
     Key? key,
@@ -18,6 +20,7 @@ class TeacherCard extends StatelessWidget {
     required this.ratingCount,
     required this.hourlyRate,
     this.onAdd,
+    this.imageBytes,
   }) : super(key: key);
 
   @override
@@ -32,16 +35,19 @@ class TeacherCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: photoUrl != null && photoUrl!.isNotEmpty
-                  ? Image.network(photoUrl!,
+              child: imageBytes != null
+                  ? Image.memory(imageBytes!,
                       width: 64, height: 64, fit: BoxFit.cover)
-                  : Container(
-                      width: 64,
-                      height: 64,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.person,
-                          size: 40, color: Colors.grey),
-                    ),
+                  : (photoUrl != null && photoUrl!.isNotEmpty
+                      ? Image.network(photoUrl!,
+                          width: 64, height: 64, fit: BoxFit.cover)
+                      : Container(
+                          width: 64,
+                          height: 64,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.person,
+                              size: 40, color: Colors.grey),
+                        )),
             ),
             const SizedBox(width: 16),
             Expanded(

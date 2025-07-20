@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import '../services/class_service.dart';
+import '../services/cache_service.dart';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
+import 'package:hive/hive.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -12,13 +17,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? name;
   String? username;
   String? photoUrl;
+  Uint8List? photoBytes;
+  String? role;
   bool loading = true;
   String error = '';
 
   @override
   void initState() {
     super.initState();
+    _loadSettingsInstant();
     _fetchUserInfo();
+  }
+
+  void _loadSettingsInstant() {
+    final cached = CacheService.getSettings();
+    if (cached != null && cached.isNotEmpty) {
+      setState(() {
+        role = cached['role'] ?? '';
+        loading = false;
+      });
+    }
+    _fetchSettings(); // Fetch fresh settings in background
   }
 
   Future<void> _fetchUserInfo() async {
@@ -26,12 +45,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       loading = true;
       error = '';
     });
+    // Try to load photo bytes from cache first
+    final box = await Hive.openBox(CacheService.userBoxName);
+    final cachedBytes = box.get('photoBytes');
+    if (cachedBytes != null) {
+      setState(() {
+        photoBytes = Uint8List.fromList(List<int>.from(cachedBytes));
+      });
+    }
     final user = await ParseUser.currentUser();
     if (user != null) {
+      name = user.get<String>('name') ?? '';
+      username = user.username ?? '';
+      final fetchedPhoto = user.get<String>('photo');
+      photoUrl = fetchedPhoto;
+      // Download and cache image bytes if not cached and URL is valid
+      if (fetchedPhoto != null &&
+          fetchedPhoto.isNotEmpty &&
+          cachedBytes == null) {
+        try {
+          final response = await http.get(Uri.parse(fetchedPhoto));
+          if (response.statusCode == 200) {
+            await box.put('photoBytes', response.bodyBytes);
+            setState(() {
+              photoBytes = response.bodyBytes;
+            });
+          }
+        } catch (_) {}
+      }
       setState(() {
-        name = user.get<String>('name') ?? '';
-        username = user.username ?? '';
-        photoUrl = user.get<String>('photo');
         loading = false;
       });
     } else {
@@ -40,6 +82,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         error = 'No user found.';
       });
     }
+  }
+
+  Future<void> _fetchSettings() async {
+    final settings = await ClassService.getSettings();
+    setState(() {
+      role = settings?['role'] ?? '';
+      loading = false;
+    });
   }
 
   @override
@@ -65,11 +115,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           CircleAvatar(
                             radius: 40,
-                            backgroundImage:
-                                photoUrl != null && photoUrl!.isNotEmpty
+                            backgroundImage: photoBytes != null
+                                ? MemoryImage(photoBytes!)
+                                : (photoUrl != null && photoUrl!.isNotEmpty
                                     ? NetworkImage(photoUrl!)
-                                    : null,
-                            child: photoUrl == null || photoUrl!.isEmpty
+                                    : null),
+                            child: (photoBytes == null &&
+                                    (photoUrl == null || photoUrl!.isEmpty))
                                 ? const Icon(Icons.person, size: 40)
                                 : null,
                           ),
@@ -80,6 +132,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(height: 4),
                           Text(username ?? '',
                               style: const TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          if (role != null && role!.isNotEmpty)
+                            Text('Role: $role',
+                                style: const TextStyle(color: Colors.blue)),
                         ],
                       ),
                     ),

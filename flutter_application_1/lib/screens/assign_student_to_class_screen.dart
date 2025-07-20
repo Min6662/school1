@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class AssignStudentToClassScreen extends StatefulWidget {
   const AssignStudentToClassScreen({super.key});
@@ -22,14 +23,45 @@ class _AssignStudentToClassScreenState
   @override
   void initState() {
     super.initState();
-    _fetchClasses();
+    _loadClassesInstant();
   }
 
-  Future<void> _fetchClasses() async {
+  Future<void> _loadClassesInstant() async {
+    final box = await Hive.openBox('assignClassList');
+    final cached = box.get('classList');
+    if (cached != null) {
+      setState(() {
+        classes = List<Map<String, dynamic>>.from(cached).map((e) {
+          final obj = ParseObject('Class')..objectId = e['objectId'];
+          obj.set('classname', e['classname']);
+          return obj;
+        }).toList();
+        loadingClasses = false;
+      });
+    }
+    _fetchClasses(forceRefresh: false); // Fetch fresh data in background
+  }
+
+  Future<void> _fetchClasses({bool forceRefresh = false}) async {
     setState(() {
       loadingClasses = true;
       error = '';
     });
+    final box = await Hive.openBox('assignClassList');
+    if (!forceRefresh) {
+      final cached = box.get('classList');
+      if (cached != null) {
+        setState(() {
+          classes = List<Map<String, dynamic>>.from(cached).map((e) {
+            final obj = ParseObject('Class')..objectId = e['objectId'];
+            obj.set('classname', e['classname']);
+            return obj;
+          }).toList();
+          loadingClasses = false;
+        });
+        // Continue to fetch fresh data in background
+      }
+    }
     final query = QueryBuilder<ParseObject>(ParseObject('Class'));
     final response = await query.query();
     if (response.success && response.results != null) {
@@ -37,6 +69,15 @@ class _AssignStudentToClassScreenState
         classes = response.results!.cast<ParseObject>();
         loadingClasses = false;
       });
+      await box.put(
+        'classList',
+        response.results!
+            .map((cls) => {
+                  'objectId': cls.objectId,
+                  'classname': cls.get<String>('classname') ?? '',
+                })
+            .toList(),
+      );
     } else {
       setState(() {
         error = 'Failed to fetch classes.';
@@ -45,11 +86,44 @@ class _AssignStudentToClassScreenState
     }
   }
 
-  Future<void> _fetchStudents() async {
+  Future<void> _loadStudentsInstant() async {
+    if (selectedClassId == null) return;
+    final box = await Hive.openBox('assignClassStudents');
+    final cached = box.get(selectedClassId);
+    if (cached != null) {
+      setState(() {
+        students = List<Map<String, dynamic>>.from(cached).map((e) {
+          final obj = ParseObject('Student')..objectId = e['objectId'];
+          obj.set('name', e['name']);
+          return obj;
+        }).toList();
+        loadingStudents = false;
+      });
+    }
+    _fetchStudents(forceRefresh: false); // Fetch fresh data in background
+  }
+
+  Future<void> _fetchStudents({bool forceRefresh = false}) async {
+    if (selectedClassId == null) return;
     setState(() {
       loadingStudents = true;
       error = '';
     });
+    final box = await Hive.openBox('assignClassStudents');
+    if (!forceRefresh) {
+      final cached = box.get(selectedClassId);
+      if (cached != null) {
+        setState(() {
+          students = List<Map<String, dynamic>>.from(cached).map((e) {
+            final obj = ParseObject('Student')..objectId = e['objectId'];
+            obj.set('name', e['name']);
+            return obj;
+          }).toList();
+          loadingStudents = false;
+        });
+        // Continue to fetch fresh data in background
+      }
+    }
     final query = QueryBuilder<ParseObject>(ParseObject('Student'));
     final response = await query.query();
     if (response.success && response.results != null) {
@@ -57,6 +131,15 @@ class _AssignStudentToClassScreenState
         students = response.results!.cast<ParseObject>();
         loadingStudents = false;
       });
+      await box.put(
+        selectedClassId,
+        response.results!
+            .map((student) => {
+                  'objectId': student.objectId,
+                  'name': student.get<String>('name') ?? '',
+                })
+            .toList(),
+      );
     } else {
       setState(() {
         error = 'Failed to fetch students.';
@@ -100,6 +183,19 @@ class _AssignStudentToClassScreenState
         title: const Text('Assign Student to Class'),
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: selectedClassId != null
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.blue),
+                  tooltip: 'Refresh Student List',
+                  onPressed: () async {
+                    final box = await Hive.openBox('assignClassStudents');
+                    await box.delete(selectedClassId);
+                    _fetchStudents(forceRefresh: true);
+                  },
+                ),
+              ]
+            : null,
       ),
       body: loadingClasses
           ? const Center(child: CircularProgressIndicator())
@@ -134,7 +230,7 @@ class _AssignStudentToClassScreenState
                     setState(() {
                       selectedClassId = cls.objectId;
                     });
-                    _fetchStudents();
+                    _loadStudentsInstant();
                   },
                   child: Card(
                     color: Colors.blue[50],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import '../screens/class_qr_code_screen.dart';
+import '../services/class_service.dart';
 
 class ClassList extends StatefulWidget {
   const ClassList({super.key});
@@ -10,7 +11,7 @@ class ClassList extends StatefulWidget {
 }
 
 class _ClassListState extends State<ClassList> {
-  List<ParseObject> classes = [];
+  List<Map<String, dynamic>> classList = [];
   Map<String, List<String>> enrolledStudents = {};
   bool loading = true;
   String error = '';
@@ -18,31 +19,30 @@ class _ClassListState extends State<ClassList> {
   @override
   void initState() {
     super.initState();
-    _fetchClasses();
+    _loadClassList();
   }
 
-  Future<void> _fetchClasses() async {
+  Future<void> _loadClassList({bool forceRefresh = false}) async {
     setState(() {
       loading = true;
       error = '';
     });
-    final query = QueryBuilder<ParseObject>(ParseObject('Class'));
-    final response = await query.query();
-    if (response.success && response.results != null) {
+    try {
+      final classes = await ClassService.getClassList();
       setState(() {
-        classes = response.results!.cast<ParseObject>();
+        classList = classes;
         loading = false;
       });
       // Fetch enrolled students for each class
-      for (var classObj in classes) {
-        final classId = classObj.objectId;
+      for (var classObj in classList) {
+        final classId = classObj['objectId'];
         if (classId != null) {
           _fetchEnrolledStudents(classId);
         }
       }
-    } else {
+    } catch (e) {
       setState(() {
-        error = 'Failed to fetch classes.';
+        error = 'Failed to load classes: \\${e.toString()}';
         loading = false;
       });
     }
@@ -93,7 +93,7 @@ class _ClassListState extends State<ClassList> {
                   final response = await newClass.save();
                   if (response.success) {
                     Navigator.of(context).pop();
-                    _fetchClasses();
+                    _loadClassList(forceRefresh: true);
                   }
                 }
               },
@@ -126,6 +126,13 @@ class _ClassListState extends State<ClassList> {
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Refresh Class List',
+            onPressed: () {
+              _loadClassList(forceRefresh: true);
+            },
+          ),
         ],
       ),
       body: Padding(
@@ -143,16 +150,15 @@ class _ClassListState extends State<ClassList> {
                       ? Center(
                           child: Text(error,
                               style: const TextStyle(color: Colors.red)))
-                      : classes.isEmpty
+                      : classList.isEmpty
                           ? const Center(child: Text('No classes found.'))
                           : ListView.builder(
-                              itemCount: classes.length,
+                              itemCount: classList.length,
                               itemBuilder: (context, index) {
-                                final classObj = classes[index];
+                                final classObj = classList[index];
                                 final className =
-                                    classObj.get<String>('classname') ??
-                                        'Class';
-                                final classId = classObj.objectId ?? '';
+                                    classObj['classname'] ?? 'Class';
+                                final classId = classObj['objectId'] ?? '';
                                 final students =
                                     enrolledStudents[classId] ?? [];
                                 return Card(
@@ -310,9 +316,8 @@ class _ClassListState extends State<ClassList> {
     );
   }
 
-  void _showEditClassDialog(ParseObject classObj) {
-    final controller =
-        TextEditingController(text: classObj.get<String>('classname') ?? '');
+  void _showEditClassDialog(Map<String, dynamic> classObj) {
+    final controller = TextEditingController(text: classObj['classname'] ?? '');
     showDialog(
       context: context,
       builder: (context) {
@@ -326,9 +331,11 @@ class _ClassListState extends State<ClassList> {
             TextButton(
               onPressed: () async {
                 // Delete class
-                await classObj.delete();
+                final classPointer = ParseObject('Class')
+                  ..objectId = classObj['objectId'];
+                await classPointer.delete();
                 Navigator.of(context).pop();
-                _fetchClasses();
+                _loadClassList(forceRefresh: true);
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
@@ -340,10 +347,12 @@ class _ClassListState extends State<ClassList> {
               onPressed: () async {
                 final newName = controller.text.trim();
                 if (newName.isNotEmpty) {
-                  classObj.set('classname', newName);
-                  await classObj.save();
+                  final classPointer = ParseObject('Class')
+                    ..objectId = classObj['objectId'];
+                  classPointer.set('classname', newName);
+                  await classPointer.save();
                   Navigator.of(context).pop();
-                  _fetchClasses();
+                  _loadClassList(forceRefresh: true);
                 }
               },
               child: const Text('Save'),
