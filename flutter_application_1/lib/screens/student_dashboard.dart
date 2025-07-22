@@ -26,7 +26,33 @@ class _StudentDashboardState extends State<StudentDashboard> {
   @override
   void initState() {
     super.initState();
-    _loadStudents();
+    _loadCachedStudents();
+  }
+
+  Future<void> _loadCachedStudents() async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    try {
+      final box = await Hive.openBox('studentListBox');
+      final cached = box.get('studentList') as List<dynamic>?;
+      if (cached != null && cached.isNotEmpty) {
+        allStudents =
+            cached.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        filteredStudents = _filterStudents(searchQuery);
+        setState(() {
+          loading = false;
+        });
+      } else {
+        await _loadStudents(forceRefresh: false);
+      }
+    } catch (e) {
+      setState(() {
+        error = 'Failed to load cached students: \\${e.toString()}';
+        loading = false;
+      });
+    }
   }
 
   Future<void> _loadStudents({bool forceRefresh = false}) async {
@@ -37,22 +63,25 @@ class _StudentDashboardState extends State<StudentDashboard> {
     try {
       final students =
           await ClassService.getStudentList(forceRefresh: forceRefresh);
-      if (students.isEmpty) {
-        setState(() {
-          error = 'No students found.';
-        });
-      }
+      allStudents = students;
+      final box = await Hive.openBox('studentListBox');
+      await box.put('studentList', allStudents);
+      filteredStudents = _filterStudents(searchQuery);
       setState(() {
-        allStudents = students;
-        filteredStudents = _filterStudents(searchQuery);
         loading = false;
       });
     } catch (e) {
       setState(() {
         loading = false;
-        error = 'Error loading students: ${e.toString()}';
+        error = 'Error loading students: \\${e.toString()}';
       });
     }
+  }
+
+  Future<void> _refreshStudents() async {
+    final box = await Hive.openBox('studentListBox');
+    await box.delete('studentList');
+    await _loadStudents(forceRefresh: true);
   }
 
   List<Map<String, dynamic>> _filterStudents(String query) {
@@ -116,7 +145,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.blue),
-            onPressed: () => _loadStudents(forceRefresh: true),
+            onPressed: () => _refreshStudents(),
             tooltip: 'Refresh',
           ),
         ],

@@ -161,4 +161,27 @@ class CacheService {
     final box = Hive.box(boxName);
     await box.delete(key);
   }
+
+  // Generic list cache methods
+  Future<void> saveList(String key, List<Map<String, dynamic>> list) async {
+    // Use attendanceBox for attendance history, otherwise default to classBox
+    final box = Hive.box(CacheService.attendanceBoxName);
+    await box.put(key, list);
+  }
+
+  List<Map<String, dynamic>>? getList(String key) {
+    final box = Hive.box(CacheService.attendanceBoxName);
+    final data = box.get(key);
+    if (data != null) {
+      return List<Map<String, dynamic>>.from(
+        (data as List).map((e) => Map<String, dynamic>.from(e)),
+      );
+    }
+    return null;
+  }
+
+  Future<void> clear(String key) async {
+    final box = Hive.box(CacheService.attendanceBoxName);
+    await box.delete(key);
+  }
 }

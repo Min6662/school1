@@ -14,6 +14,7 @@ class StudentAttendanceScreen extends StatefulWidget {
 class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
   String? selectedClassId;
   DateTime selectedDate = DateTime.now();
+  String selectedSession = 'Morning';
   List<ParseObject> classes = [];
   List<Map<String, dynamic>> students = [];
   bool loadingClasses = true;
@@ -37,9 +38,10 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
     final cached = box.get('classList');
     if (cached != null) {
       setState(() {
-        classes = List<Map<String, dynamic>>.from(cached).map((e) {
-          final obj = ParseObject('Class')..objectId = e['objectId'];
-          obj.set('classname', e['classname']);
+        classes = (cached as List).map((e) {
+          final map = Map<String, dynamic>.from(e as Map);
+          final obj = ParseObject('Class')..objectId = map['objectId'];
+          obj.set('classname', map['classname']);
           return obj;
         }).toList();
         loadingClasses = false;
@@ -57,9 +59,10 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
       final cached = box.get('classList');
       if (cached != null) {
         setState(() {
-          classes = List<Map<String, dynamic>>.from(cached).map((e) {
-            final obj = ParseObject('Class')..objectId = e['objectId'];
-            obj.set('classname', e['classname']);
+          classes = (cached as List).map((e) {
+            final map = Map<String, dynamic>.from(e as Map);
+            final obj = ParseObject('Class')..objectId = map['objectId'];
+            obj.set('classname', map['classname']);
             return obj;
           }).toList();
           loadingClasses = false;
@@ -95,7 +98,9 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
     final cached = box.get(classId);
     if (cached != null) {
       setState(() {
-        students = List<Map<String, dynamic>>.from(cached);
+        students = (cached as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
         loadingStudents = false;
       });
     }
@@ -113,7 +118,9 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
       final cached = box.get(classId);
       if (cached != null) {
         setState(() {
-          students = List<Map<String, dynamic>>.from(cached);
+          students = (cached as List)
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
           loadingStudents = false;
         });
         // Continue to fetch fresh data in background
@@ -149,15 +156,24 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
         orElse: () => ParseObject('Class'));
     final className = classObj.get<String>('classname') ?? '';
     int duplicateCount = 0;
+    // Normalize date to midnight local, then convert to UTC
+    final normalizedDateLocal =
+        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final normalizedDateUtc = DateTime.utc(
+      normalizedDateLocal.year,
+      normalizedDateLocal.month,
+      normalizedDateLocal.day,
+    );
     for (var student in students) {
       if (student['status'] != 'absent') continue; // Only store absents
-      // Check for existing attendance for this student/class/date
+      // Check for existing attendance for this student/class/date/session
       final query = QueryBuilder<ParseObject>(ParseObject('Attendance'))
         ..whereEqualTo(
             'student', ParseObject('Student')..objectId = student['id'])
         ..whereEqualTo(
             'class', ParseObject('Class')..objectId = selectedClassId)
-        ..whereEqualTo('date', selectedDate);
+        ..whereEqualTo('date', normalizedDateUtc)
+        ..whereEqualTo('session', selectedSession);
       final response = await query.query();
       if (response.success &&
           response.results != null &&
@@ -169,8 +185,13 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
         ..set('student', ParseObject('Student')..objectId = student['id'])
         ..set('class', ParseObject('Class')..objectId = selectedClassId)
         ..set('studentName', student['name'])
-        ..set('className', className)
-        ..set('date', selectedDate)
+        ..set('classname', className)
+        ..set(
+            'classId',
+            ParseObject('Class')
+              ..objectId = selectedClassId) // <-- save as Pointer
+        ..set('date', normalizedDateUtc)
+        ..set('session', selectedSession)
         ..set('status', student['status']);
       await attendance.save();
     }
@@ -254,17 +275,31 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
                 const Text('Date:',
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(width: 12),
-                TextButton(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) setState(() => selectedDate = picked);
+                Text(
+                  '${selectedDate.toLocal()}'.split(' ')[0],
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Text('Session:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 12),
+                DropdownButton<String>(
+                  value: selectedSession,
+                  items: ['Morning', 'Afternoon']
+                      .map((s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s),
+                          ))
+                      .toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      selectedSession = val!;
+                    });
                   },
-                  child: Text('${selectedDate.toLocal()}'.split(' ')[0]),
                 ),
               ],
             ),
@@ -351,7 +386,8 @@ class AttendanceHistoryView extends StatelessWidget {
             child: classId == null
                 ? const Center(child: Text('No class selected.'))
                 : FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _fetchAttendanceHistory(classId!),
+                    future:
+                        AttendanceHistoryView.fetchAttendanceHistory(classId!),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -370,7 +406,7 @@ class AttendanceHistoryView extends StatelessWidget {
                               child: ListTile(
                                 title: Text(record['studentName']),
                                 subtitle: Text(
-                                    'Status: ${record['status']}, Date: ${record['date']}'),
+                                    'Status: ${record['status']}, Date: ${record['date']}, Session: ${record['session']}'),
                               ),
                             );
                           },
@@ -389,17 +425,28 @@ class AttendanceHistoryView extends StatelessWidget {
     );
   }
 
-  Future<List<Map<String, dynamic>>> _fetchAttendanceHistory(
+  /// Static method so it can be reused elsewhere if needed
+  static Future<List<Map<String, dynamic>>> fetchAttendanceHistory(
       String classId) async {
     final query = QueryBuilder<ParseObject>(ParseObject('Attendance'))
-      ..whereEqualTo('class', ParseObject('Class')..objectId = classId);
+      ..whereEqualTo('class', ParseObject('Class')..objectId = classId)
+      ..whereEqualTo('status', 'absent');
     final response = await query.query();
     if (response.success && response.results != null) {
       return response.results!.map((e) {
+        // Fetch classname for display
+        String? classname = e.get<String>('classname');
+        // If not present, try to get from class pointer
+        if (classname == null || classname.isEmpty) {
+          final classObj = e.get<ParseObject>('class');
+          classname = classObj?.get<String>('classname') ?? '';
+        }
         return {
           'studentName': e.get<String>('studentName') ?? '',
           'status': e.get<String>('status') ?? '',
           'date': e.get<DateTime>('date')?.toLocal().toString() ?? '',
+          'session': e.get<String>('session') ?? '',
+          'classname': classname ?? '',
         };
       }).toList();
     } else {

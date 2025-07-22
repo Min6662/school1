@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import 'package:hive/hive.dart';
 import 'login_page.dart';
 
 class SignupPage extends StatefulWidget {
@@ -24,6 +25,11 @@ class _SignupPageState extends State<SignupPage> {
     user.set('role', selectedRole);
     final response = await user.signUp();
     if (response.success) {
+      // Cache user session token and info in Hive
+      final box = await Hive.openBox('userSessionBox');
+      await box.put('sessionToken', user.sessionToken);
+      await box.put('username', username);
+      await box.put('role', selectedRole);
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (_) => const LoginPage()));
     } else {

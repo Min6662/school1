@@ -5,6 +5,7 @@ import '../services/cache_service.dart';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:hive/hive.dart';
+import 'login_page.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,6 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? role;
   bool loading = true;
   String error = '';
+  String? userCacheKey;
 
   @override
   void initState() {
@@ -45,18 +47,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       loading = true;
       error = '';
     });
-    // Try to load photo bytes from cache first
-    final box = await Hive.openBox(CacheService.userBoxName);
-    final cachedBytes = box.get('photoBytes');
-    if (cachedBytes != null) {
-      setState(() {
-        photoBytes = Uint8List.fromList(List<int>.from(cachedBytes));
-      });
-    }
     final user = await ParseUser.currentUser();
     if (user != null) {
       name = user.get<String>('name') ?? '';
       username = user.username ?? '';
+      userCacheKey = 'photoBytes_${username ?? user.objectId}';
+      final box = await Hive.openBox(CacheService.userBoxName);
+      final cachedBytes = box.get(userCacheKey!);
+      if (cachedBytes != null) {
+        setState(() {
+          photoBytes = Uint8List.fromList(List<int>.from(cachedBytes));
+        });
+      }
       final fetchedPhoto = user.get<String>('photo');
       photoUrl = fetchedPhoto;
       // Download and cache image bytes if not cached and URL is valid
@@ -66,7 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         try {
           final response = await http.get(Uri.parse(fetchedPhoto));
           if (response.statusCode == 200) {
-            await box.put('photoBytes', response.bodyBytes);
+            await box.put(userCacheKey!, response.bodyBytes);
             setState(() {
               photoBytes = response.bodyBytes;
             });
@@ -154,8 +156,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
       trailing:
           const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-      onTap: () {
-        // TODO: Implement navigation or actions for each setting
+      onTap: () async {
+        if (title == 'Logout') {
+          // Clear session info from Hive and Parse
+          final box = await Hive.openBox('userSessionBox');
+          await box.delete('sessionToken');
+          await box.delete('username');
+          await box.delete('role');
+          final userBox = await Hive.openBox(CacheService.userBoxName);
+          if (userCacheKey != null) {
+            await userBox.delete(userCacheKey!);
+          }
+          final user = await ParseUser.currentUser();
+          if (user != null) {
+            await user.logout();
+          }
+          if (mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginPage()),
+              (route) => false,
+            );
+          }
+        }
+        // TODO: Implement navigation for other settings
       },
     );
   }

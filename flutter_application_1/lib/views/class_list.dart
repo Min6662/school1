@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import 'package:hive/hive.dart';
 import '../screens/class_qr_code_screen.dart';
 import '../services/class_service.dart';
 
@@ -19,7 +20,39 @@ class _ClassListState extends State<ClassList> {
   @override
   void initState() {
     super.initState();
-    _loadClassList();
+    _loadCachedClassList();
+  }
+
+  Future<void> _loadCachedClassList() async {
+    setState(() {
+      loading = true;
+      error = '';
+    });
+    try {
+      final box = await Hive.openBox('classListBox');
+      final cached = box.get('classList') as List<dynamic>?;
+      if (cached != null && cached.isNotEmpty) {
+        classList =
+            cached.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        setState(() {
+          loading = false;
+        });
+        // Fetch enrolled students for each class
+        for (var classObj in classList) {
+          final classId = classObj['objectId'];
+          if (classId != null) {
+            _fetchEnrolledStudents(classId);
+          }
+        }
+      } else {
+        await _loadClassList(forceRefresh: false);
+      }
+    } catch (e) {
+      setState(() {
+        error = 'Failed to load cached classes: \\${e.toString()}';
+        loading = false;
+      });
+    }
   }
 
   Future<void> _loadClassList({bool forceRefresh = false}) async {
@@ -29,8 +62,10 @@ class _ClassListState extends State<ClassList> {
     });
     try {
       final classes = await ClassService.getClassList();
+      classList = classes;
+      final box = await Hive.openBox('classListBox');
+      await box.put('classList', classList);
       setState(() {
-        classList = classes;
         loading = false;
       });
       // Fetch enrolled students for each class
@@ -46,6 +81,12 @@ class _ClassListState extends State<ClassList> {
         loading = false;
       });
     }
+  }
+
+  Future<void> _refreshClassList() async {
+    final box = await Hive.openBox('classListBox');
+    await box.delete('classList');
+    await _loadClassList(forceRefresh: true);
   }
 
   Future<void> _fetchEnrolledStudents(String classId) async {
@@ -130,7 +171,7 @@ class _ClassListState extends State<ClassList> {
             icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Refresh Class List',
             onPressed: () {
-              _loadClassList(forceRefresh: true);
+              _refreshClassList();
             },
           ),
         ],

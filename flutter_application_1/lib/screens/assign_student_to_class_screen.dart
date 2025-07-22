@@ -31,9 +31,10 @@ class _AssignStudentToClassScreenState
     final cached = box.get('classList');
     if (cached != null) {
       setState(() {
-        classes = List<Map<String, dynamic>>.from(cached).map((e) {
-          final obj = ParseObject('Class')..objectId = e['objectId'];
-          obj.set('classname', e['classname']);
+        classes = (cached as List).map((e) {
+          final map = Map<String, dynamic>.from(e as Map);
+          final obj = ParseObject('Class')..objectId = map['objectId'];
+          obj.set('classname', map['classname']);
           return obj;
         }).toList();
         loadingClasses = false;
@@ -52,9 +53,10 @@ class _AssignStudentToClassScreenState
       final cached = box.get('classList');
       if (cached != null) {
         setState(() {
-          classes = List<Map<String, dynamic>>.from(cached).map((e) {
-            final obj = ParseObject('Class')..objectId = e['objectId'];
-            obj.set('classname', e['classname']);
+          classes = (cached as List).map((e) {
+            final map = Map<String, dynamic>.from(e as Map);
+            final obj = ParseObject('Class')..objectId = map['objectId'];
+            obj.set('classname', map['classname']);
             return obj;
           }).toList();
           loadingClasses = false;

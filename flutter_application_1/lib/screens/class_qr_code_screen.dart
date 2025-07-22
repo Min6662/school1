@@ -165,12 +165,12 @@ class _ClassQRCodeScreenState extends State<ClassQRCodeScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              cachedClasses.firstWhere(
+                              (cachedClasses.firstWhere(
                                     (cls) => cls['objectId'] == selectedClassId,
                                     orElse: () =>
-                                        <String, dynamic>{'classname': ''},
+                                        <String, String?>{'classname': ''},
                                   )['classname'] ??
-                                  '',
+                                  ''),
                               style: const TextStyle(
                                   fontSize: 18, fontWeight: FontWeight.bold),
                             ),

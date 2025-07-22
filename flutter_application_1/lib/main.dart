@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'views/login_page.dart';
+import 'views/login_page1.dart';
 import 'screens/student_attendance_history_screen.dart';
 import 'screens/student_dashboard.dart';
 import 'services/cache_service.dart';

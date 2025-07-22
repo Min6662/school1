@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:reorderables/reorderables.dart';
 
+import '../screens/assigned_classes_screen.dart'; // Import the new screen
+import '../screens/time_table_screen.dart';
+
 class ModernDashboard extends StatefulWidget {
   final String title;
   final String subtitle;
@@ -16,6 +19,8 @@ class ModernDashboard extends StatefulWidget {
   final VoidCallback? onEnrolmentsTap;
   final VoidCallback? onQRScanTap;
   final VoidCallback? onStudentAttendanceTap;
+  final VoidCallback? onAssignedClassesTap;
+  final VoidCallback? onTimetableTap;
   const ModernDashboard({
     super.key,
     required this.title,
@@ -32,6 +37,8 @@ class ModernDashboard extends StatefulWidget {
     this.onEnrolmentsTap,
     this.onQRScanTap,
     this.onStudentAttendanceTap,
+    this.onAssignedClassesTap,
+    this.onTimetableTap,
   });
 
   @override
@@ -84,6 +91,31 @@ class _ModernDashboardState extends State<ModernDashboard> {
         'title': 'Attendance',
         'description': 'For Students',
         'onTap': widget.onStudentAttendanceTap ?? () {},
+      },
+      // New cards for teacher features
+      {
+        'icon': Icons.assignment_ind,
+        'title': 'Assigned',
+        'description': 'Teaching Classes',
+        'onTap': () {
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (_) => const AssignedClassesScreen(),
+            ),
+          );
+        },
+      },
+      {
+        'icon': Icons.schedule,
+        'title': 'Timetable',
+        'description': 'Schedule',
+        'onTap': () {
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (_) => const TimeTableScreen(),
+            ),
+          );
+        },
       },
     ];
   }

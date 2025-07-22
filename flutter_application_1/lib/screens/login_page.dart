@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import 'package:hive/hive.dart';
 import 'signup_page.dart';
 import '../screens/admin_dashboard.dart';
 import '../screens/teacher_dashboard.dart';
@@ -17,6 +18,36 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
   String errorMessage = '';
 
+  @override
+  void initState() {
+    super.initState();
+    _checkSessionAndAutoLogin();
+  }
+
+  Future<void> _checkSessionAndAutoLogin() async {
+    final box = await Hive.openBox('userSessionBox');
+    final sessionToken = box.get('sessionToken');
+    final username = box.get('username');
+    final role = box.get('role');
+    if (sessionToken != null && username != null && role != null) {
+      // Optionally, validate sessionToken with Parse if needed
+      if (role == 'admin') {
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const AdminDashboard(currentIndex: 0)));
+      } else if (role == 'teacher') {
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const TeacherDashboard()));
+      } else {
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const StudentDashboard(currentIndex: 2)));
+      }
+    }
+  }
+
   Future<void> loginUser() async {
     final email = emailController.text.trim();
     final password = passwordController.text;
@@ -24,6 +55,11 @@ class _LoginPageState extends State<LoginPage> {
     final response = await user.login();
     if (response.success && response.result != null) {
       final role = response.result.get<String>('role');
+      // Cache session info in Hive
+      final box = await Hive.openBox('userSessionBox');
+      await box.put('sessionToken', user.sessionToken);
+      await box.put('username', email);
+      await box.put('role', role);
       if (role == 'admin') {
         Navigator.pushReplacement(
             context,
@@ -43,6 +79,19 @@ class _LoginPageState extends State<LoginPage> {
         errorMessage = response.error?.message ?? 'Login failed';
       });
     }
+  }
+
+  // Add this logout function to clear session
+  Future<void> logoutUser() async {
+    final box = await Hive.openBox('userSessionBox');
+    await box.clear();
+    // Optionally, also log out from Parse
+    await ParseUser.currentUser()
+      ..logout();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+    );
   }
 
   @override
@@ -129,11 +178,13 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      final box = await Hive.openBox('userSessionBox');
+                      await box.clear();
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SignupPage()));
+                        context,
+                        MaterialPageRoute(builder: (_) => const SignupPage()),
+                      );
                     },
                     child: const Text('Don\'t have an account? Sign Up'),
                   ),
