@@ -7,6 +7,7 @@ class CacheService {
   static const String attendanceBoxName = 'attendanceBox';
   static const String userBoxName = 'userBox';
   static const String settingsBoxName = 'settingsBox';
+  static const String enrollmentBoxName = 'enrollmentBox';
 
   // Call once at app startup
   static Future<void> init() async {
@@ -16,6 +17,7 @@ class CacheService {
     await Hive.openBox(attendanceBoxName);
     await Hive.openBox(userBoxName);
     await Hive.openBox(settingsBoxName);
+    await Hive.openBox(enrollmentBoxName);
   }
 
   // Class List
@@ -160,6 +162,122 @@ class CacheService {
   static Future<void> clearImage(String boxName, String key) async {
     final box = Hive.box(boxName);
     await box.delete(key);
+  }
+
+  // Student Count
+  static Future<void> saveStudentCount(int count) async {
+    final box = Hive.box(studentBoxName);
+    await box.put('studentCount', count);
+  }
+
+  static int? getStudentCount() {
+    final box = Hive.box(studentBoxName);
+    return box.get('studentCount');
+  }
+
+  // Class Count
+  static Future<void> saveClassCount(int count) async {
+    final box = Hive.box(classBoxName);
+    await box.put('classCount', count);
+  }
+
+  static int? getClassCount() {
+    final box = Hive.box(classBoxName);
+    return box.get('classCount');
+  }
+
+  // Enrolled Students (per class)
+  static Future<void> saveEnrolledStudents(
+      String classId, List<Map<String, dynamic>> students) async {
+    final box = Hive.box(enrollmentBoxName);
+    await box.put('class_$classId', {
+      'students': students,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  static List<Map<String, dynamic>>? getEnrolledStudents(String classId) {
+    final box = Hive.box(enrollmentBoxName);
+    final data = box.get('class_$classId');
+    if (data != null && data is Map) {
+      final students = data['students'];
+      if (students != null) {
+        return List<Map<String, dynamic>>.from(
+          (students as List).map((e) => Map<String, dynamic>.from(e)),
+        );
+      }
+    }
+    return null;
+  }
+
+  static Future<void> clearEnrolledStudents(String classId) async {
+    final box = Hive.box(enrollmentBoxName);
+    await box.delete('class_$classId');
+  }
+
+  static Future<void> clearAllEnrollments() async {
+    final box = Hive.box(enrollmentBoxName);
+    await box.clear();
+  }
+
+  // Check if enrolled students data is fresh (within specified duration)
+  static bool isEnrollmentDataFresh(String classId, Duration maxAge) {
+    try {
+      final box = Hive.box(enrollmentBoxName);
+      final timestamp = box.get('${classId}_timestamp');
+      if (timestamp == null) return false;
+
+      final cacheTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+      final now = DateTime.now();
+
+      return now.difference(cacheTime) < maxAge;
+    } catch (e) {
+      return false; // If there's any error, assume data is not fresh
+    }
+  }
+
+  // Initialize cache boxes if needed
+  static Future<void> initializeCacheBoxes() async {
+    try {
+      if (!Hive.isBoxOpen(classBoxName)) {
+        await Hive.openBox(classBoxName);
+      }
+      if (!Hive.isBoxOpen(studentBoxName)) {
+        await Hive.openBox(studentBoxName);
+      }
+      if (!Hive.isBoxOpen(teacherBoxName)) {
+        await Hive.openBox(teacherBoxName);
+      }
+      if (!Hive.isBoxOpen(attendanceBoxName)) {
+        await Hive.openBox(attendanceBoxName);
+      }
+      if (!Hive.isBoxOpen(userBoxName)) {
+        await Hive.openBox(userBoxName);
+      }
+      if (!Hive.isBoxOpen(settingsBoxName)) {
+        await Hive.openBox(settingsBoxName);
+      }
+      if (!Hive.isBoxOpen(enrollmentBoxName)) {
+        await Hive.openBox(enrollmentBoxName);
+      }
+    } catch (e) {
+      print('Error initializing cache boxes: $e');
+    }
+  }
+
+  // Clear all cache data (useful for logout or data reset)
+  static Future<void> clearAllCache() async {
+    try {
+      await Hive.box(classBoxName).clear();
+      await Hive.box(studentBoxName).clear();
+      await Hive.box(teacherBoxName).clear();
+      await Hive.box(attendanceBoxName).clear();
+      await Hive.box(userBoxName).clear();
+      await Hive.box(settingsBoxName).clear();
+      await Hive.box(enrollmentBoxName).clear();
+    } catch (e) {
+      print('Error clearing cache: $e');
+    }
   }
 
   // Generic list cache methods

@@ -1,8 +1,15 @@
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 
 class StudentService {
-  Future<List<ParseObject>> fetchStudents({String? searchQuery}) async {
+  Future<List<ParseObject>> fetchStudents(
+      {String? searchQuery, String? schoolId}) async {
     final query = QueryBuilder<ParseObject>(ParseObject('Student'));
+
+    // TODO: Uncomment when multi-tenant system is fully implemented
+    // if (schoolId != null) {
+    //   query.whereEqualTo('school', ParseObject('School')..objectId = schoolId);
+    // }
+
     if (searchQuery != null && searchQuery.isNotEmpty) {
       query.whereContains('name', searchQuery);
     }
@@ -22,6 +29,7 @@ class StudentService {
     DateTime? dateOfBirth,
     String? photoUrl,
     String gender = 'Male',
+    String? schoolId,
   }) async {
     final student = ParseObject('Student')
       ..set('name', name)
@@ -29,9 +37,18 @@ class StudentService {
       ..set('address', address)
       ..set('phoneNumber', phoneNumber)
       ..set('studyStatus', studyStatus)
-      ..set('dateOfBirth', dateOfBirth?.toIso8601String())
-      ..set('photo', photoUrl ?? '')
       ..set('gender', gender);
+
+    if (dateOfBirth != null) {
+      student.set('dateOfBirth', dateOfBirth);
+    }
+    if (photoUrl != null) {
+      student.set('photo', photoUrl);
+    }
+    if (schoolId != null) {
+      student.set('school', ParseObject('School')..objectId = schoolId);
+    }
+
     return await student.save();
   }
 

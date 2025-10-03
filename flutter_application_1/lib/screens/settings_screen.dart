@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:hive/hive.dart';
 import 'login_page.dart';
+import 'school_management_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -144,6 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 32),
                     _settingsTile(Icons.person, 'Edit Profile'),
                     _settingsTile(Icons.lock, 'Change Password'),
+                    _settingsTile(Icons.school, 'School Management'),
                     _settingsTile(Icons.logout, 'Logout'),
                   ],
                 ),
@@ -171,6 +173,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (user != null) {
             await user.logout();
           }
+          // Clear all cache data
+          await CacheService.clearAllCache();
           if (mounted) {
             Navigator.pushAndRemoveUntil(
               context,
@@ -178,6 +182,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               (route) => false,
             );
           }
+        }
+        // Navigate to School Management Screen
+        if (title == 'School Management') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const SchoolManagementScreen(),
+            ),
+          );
         }
         // TODO: Implement navigation for other settings
       },

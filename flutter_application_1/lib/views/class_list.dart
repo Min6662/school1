@@ -3,6 +3,7 @@ import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'package:hive/hive.dart';
 import '../screens/class_qr_code_screen.dart';
 import '../services/class_service.dart';
+import '../screens/enrolled_students_screen.dart';
 
 class ClassList extends StatefulWidget {
   const ClassList({super.key});
@@ -13,7 +14,6 @@ class ClassList extends StatefulWidget {
 
 class _ClassListState extends State<ClassList> {
   List<Map<String, dynamic>> classList = [];
-  Map<String, List<String>> enrolledStudents = {};
   bool loading = true;
   String error = '';
 
@@ -37,13 +37,6 @@ class _ClassListState extends State<ClassList> {
         setState(() {
           loading = false;
         });
-        // Fetch enrolled students for each class
-        for (var classObj in classList) {
-          final classId = classObj['objectId'];
-          if (classId != null) {
-            _fetchEnrolledStudents(classId);
-          }
-        }
       } else {
         await _loadClassList(forceRefresh: false);
       }
@@ -68,13 +61,6 @@ class _ClassListState extends State<ClassList> {
       setState(() {
         loading = false;
       });
-      // Fetch enrolled students for each class
-      for (var classObj in classList) {
-        final classId = classObj['objectId'];
-        if (classId != null) {
-          _fetchEnrolledStudents(classId);
-        }
-      }
     } catch (e) {
       setState(() {
         error = 'Failed to load classes: \\${e.toString()}';
@@ -87,27 +73,6 @@ class _ClassListState extends State<ClassList> {
     final box = await Hive.openBox('classListBox');
     await box.delete('classList');
     await _loadClassList(forceRefresh: true);
-  }
-
-  Future<void> _fetchEnrolledStudents(String classId) async {
-    final classPointer = ParseObject('Class')..objectId = classId;
-    final enrolQuery = QueryBuilder<ParseObject>(ParseObject('Enrolment'))
-      ..whereEqualTo('class', classPointer);
-    final enrolResponse = await enrolQuery.query();
-    if (enrolResponse.success && enrolResponse.results != null) {
-      final students = enrolResponse.results!
-          .map((e) => e.get<String>('studentName') ?? '')
-          .where((name) => name.isNotEmpty)
-          .toList()
-          .cast<String>();
-      setState(() {
-        enrolledStudents[classId] = students;
-      });
-    } else {
-      setState(() {
-        enrolledStudents[classId] = [];
-      });
-    }
   }
 
   void _showAddClassDialog() {
@@ -200,8 +165,6 @@ class _ClassListState extends State<ClassList> {
                                 final className =
                                     classObj['classname'] ?? 'Class';
                                 final classId = classObj['objectId'] ?? '';
-                                final students =
-                                    enrolledStudents[classId] ?? [];
                                 return Card(
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16)),
@@ -226,116 +189,15 @@ class _ClassListState extends State<ClassList> {
                                                 BorderRadius.circular(8)),
                                       ),
                                       onPressed: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (context) {
-                                            return AlertDialog(
-                                              title: Text(
-                                                  'Enrolled Students for "$className"'),
-                                              content: students.isEmpty
-                                                  ? const Text(
-                                                      'No students enrolled.')
-                                                  : SizedBox(
-                                                      width: double.maxFinite,
-                                                      child: ListView.builder(
-                                                        shrinkWrap: true,
-                                                        itemCount:
-                                                            students.length,
-                                                        itemBuilder:
-                                                            (context, idx) {
-                                                          final studentName =
-                                                              students[idx];
-                                                          return ListTile(
-                                                            leading: const Icon(
-                                                                Icons.person),
-                                                            title: Text(
-                                                                studentName),
-                                                            trailing:
-                                                                PopupMenuButton<
-                                                                    String>(
-                                                              icon: const Icon(
-                                                                  Icons
-                                                                      .more_vert),
-                                                              onSelected:
-                                                                  (value) async {
-                                                                if (value ==
-                                                                    'delete') {
-                                                                  final classPointer =
-                                                                      ParseObject(
-                                                                          'Class')
-                                                                        ..objectId =
-                                                                            classId;
-                                                                  final enrolQuery = QueryBuilder<
-                                                                      ParseObject>(
-                                                                    ParseObject(
-                                                                        'Enrolment'),
-                                                                  )
-                                                                    ..whereEqualTo(
-                                                                        'class',
-                                                                        classPointer)
-                                                                    ..whereEqualTo(
-                                                                        'studentName',
-                                                                        studentName);
-                                                                  final enrolResponse =
-                                                                      await enrolQuery
-                                                                          .query();
-                                                                  if (enrolResponse
-                                                                          .success &&
-                                                                      enrolResponse
-                                                                              .results !=
-                                                                          null &&
-                                                                      enrolResponse
-                                                                          .results!
-                                                                          .isNotEmpty) {
-                                                                    final enrolObj = enrolResponse
-                                                                            .results!
-                                                                            .first
-                                                                        as ParseObject;
-                                                                    await enrolObj
-                                                                        .delete();
-                                                                    await _fetchEnrolledStudents(
-                                                                        classId);
-                                                                    setState(
-                                                                        () {});
-                                                                  }
-                                                                }
-                                                              },
-                                                              itemBuilder:
-                                                                  (context) => [
-                                                                const PopupMenuItem(
-                                                                  value:
-                                                                      'delete',
-                                                                  child: Row(
-                                                                    children: [
-                                                                      Icon(
-                                                                          Icons
-                                                                              .delete,
-                                                                          color:
-                                                                              Colors.red),
-                                                                      SizedBox(
-                                                                          width:
-                                                                              8),
-                                                                      Text(
-                                                                          'Delete'),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.of(context)
-                                                          .pop(),
-                                                  child: const Text('Close'),
-                                                ),
-                                              ],
-                                            );
-                                          },
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                EnrolledStudentsScreen(
+                                              classId: classId,
+                                              className: className,
+                                            ),
+                                          ),
                                         );
                                       },
                                       child: const Text('View'),

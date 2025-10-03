@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'package:hive/hive.dart';
 import '../screens/admin_dashboard.dart';
-import '../screens/teacher_dashboard.dart';
 import '../screens/student_dashboard.dart';
 import '../screens/signup_page.dart';
 
@@ -37,8 +36,11 @@ class _LoginPageState extends State<LoginPage> {
             MaterialPageRoute(
                 builder: (_) => const AdminDashboard(currentIndex: 0)));
       } else if (role == 'teacher') {
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const TeacherDashboard()));
+        // Teachers should also go to AdminDashboard with limited access
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const AdminDashboard(currentIndex: 0)));
       } else {
         Navigator.pushReplacement(
             context,
@@ -66,8 +68,11 @@ class _LoginPageState extends State<LoginPage> {
             MaterialPageRoute(
                 builder: (_) => const AdminDashboard(currentIndex: 0)));
       } else if (role == 'teacher') {
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const TeacherDashboard()));
+        // Teachers should also go to AdminDashboard with limited access
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const AdminDashboard(currentIndex: 0)));
       } else {
         Navigator.pushReplacement(
             context,
@@ -85,101 +90,107 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 32),
-                  const CircleAvatar(
-                    radius: 36,
-                    backgroundImage: AssetImage('assets/university_logo.png'),
-                    backgroundColor: Colors.transparent,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Columbia University',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[900],
+      body: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/logo.png', width: 120, height: 120),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 32),
+                    const CircleAvatar(
+                      radius: 36,
+                      backgroundImage: AssetImage('assets/university_logo.png'),
+                      backgroundColor: Colors.transparent,
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: emailController,
-                            decoration: InputDecoration(
-                              labelText: 'Email',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: passwordController,
-                            obscureText: true,
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                backgroundColor: Colors.blue[700],
-                              ),
-                              onPressed: loginUser,
-                              child: const Text(
-                                'Login',
-                                style: TextStyle(
-                                    fontSize: 18, color: Colors.white),
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const SignupPage()));
-                            },
-                            child: const Text("Don't have an account? Sign Up"),
-                          ),
-                          if (errorMessage.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(errorMessage,
-                                  style: const TextStyle(color: Colors.red)),
-                            ),
-                        ],
+                    const SizedBox(height: 16),
+                    Text(
+                      'Columbia University',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[900],
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 32),
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          children: [
+                            TextField(
+                              controller: emailController,
+                              decoration: InputDecoration(
+                                labelText: 'Email',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: passwordController,
+                              obscureText: true,
+                              decoration: InputDecoration(
+                                labelText: 'Password',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  backgroundColor: Colors.blue[700],
+                                ),
+                                onPressed: loginUser,
+                                child: const Text(
+                                  'Login',
+                                  style: TextStyle(
+                                      fontSize: 18, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const SignupPage()));
+                              },
+                              child:
+                                  const Text("Don't have an account? Sign Up"),
+                            ),
+                            if (errorMessage.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(errorMessage,
+                                    style: const TextStyle(color: Colors.red)),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

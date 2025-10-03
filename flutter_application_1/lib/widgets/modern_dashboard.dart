@@ -21,6 +21,7 @@ class ModernDashboard extends StatefulWidget {
   final VoidCallback? onStudentAttendanceTap;
   final VoidCallback? onAssignedClassesTap;
   final VoidCallback? onTimetableTap;
+  final String? userRole; // Add userRole parameter
   const ModernDashboard({
     super.key,
     required this.title,
@@ -39,6 +40,7 @@ class ModernDashboard extends StatefulWidget {
     this.onStudentAttendanceTap,
     this.onAssignedClassesTap,
     this.onTimetableTap,
+    this.userRole, // Add userRole to constructor
   });
 
   @override
@@ -55,6 +57,13 @@ class _ModernDashboardState extends State<ModernDashboard> {
   void initState() {
     super.initState();
     _selectedIndex = widget.currentIndex;
+
+    // Debug print to check userRole
+    print('DEBUG: userRole in ModernDashboard: ${widget.userRole}');
+    print('DEBUG: userRole?.toLowerCase(): ${widget.userRole?.toLowerCase()}');
+    print(
+        'DEBUG: Should hide Enrollments: ${widget.userRole?.toLowerCase() == 'teacher'}');
+
     _schoolDataCards = [
       {
         'icon': Icons.class_,
@@ -74,12 +83,14 @@ class _ModernDashboardState extends State<ModernDashboard> {
         'description': 'View exam results',
         'onTap': widget.onExamResultTap ?? () {},
       },
-      {
-        'icon': Icons.how_to_reg,
-        'title': 'Enrolments',
-        'description': 'View enrolments',
-        'onTap': widget.onEnrolmentsTap ?? () {},
-      },
+      // Only show Enrollments card if user is not a teacher
+      if (widget.userRole?.toLowerCase() != 'teacher')
+        {
+          'icon': Icons.how_to_reg,
+          'title': 'Enrolments',
+          'description': 'View enrolments',
+          'onTap': widget.onEnrolmentsTap ?? () {},
+        },
       {
         'icon': Icons.qr_code_scanner,
         'title': 'QR Scan',
@@ -118,6 +129,10 @@ class _ModernDashboardState extends State<ModernDashboard> {
         },
       },
     ];
+
+    // Debug print final card count
+    print('DEBUG: Total cards: ${_schoolDataCards.length}');
+    _schoolDataCards.forEach((card) => print('DEBUG: Card: ${card['title']}'));
   }
 
   void _onItemTapped(int index) {
@@ -151,55 +166,88 @@ class _ModernDashboardState extends State<ModernDashboard> {
             Text(widget.title, style: const TextStyle(color: Colors.black)),
           ],
         ),
-        actions: widget.actions,
+        // Removed actions: widget.actions
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
               16, 16, 16, kBottomNavigationBarHeight + 17),
           children: [
-            Text(widget.subtitle,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
+            // Move card to top
             SizedBox(
-              height: 100,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: widget.activities.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, i) {
-                  final act = widget.activities[i];
-                  return Container(
-                    width: 160,
-                    constraints: const BoxConstraints(maxWidth: 180),
+              height: 240,
+              child: Center(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: Container(
+                    width: 380,
+                    constraints: const BoxConstraints(maxWidth: 420),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          colors: [Colors.blueAccent, Colors.pinkAccent]),
-                      borderRadius: BorderRadius.circular(16),
+                      color: const Color(0xFFF5E6E0), // Softer pink
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: Center(
-                      child: Text(
-                        act['title'] ?? '',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16),
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 32.0, horizontal: 20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.school,
+                                  color: Color(0xFF1565C0), size: 28),
+                              SizedBox(width: 10),
+                              Text('School Overview',
+                                  style: const TextStyle(
+                                      color: Color(0xFF1565C0),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18)),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _overviewStat(
+                                  'Students',
+                                  widget.activities.isNotEmpty
+                                      ? widget.activities[0]['desc'] ?? ''
+                                      : '',
+                                  Colors.black87),
+                              _overviewStat(
+                                  'Teachers',
+                                  widget.activities.length > 1
+                                      ? widget.activities[1]['desc'] ?? ''
+                                      : '',
+                                  Colors.black87),
+                              _overviewStat(
+                                  'Classes',
+                                  widget.activities.length > 2
+                                      ? widget.activities[2]['desc'] ?? ''
+                                      : '',
+                                  Colors.black87),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            // School Data Section
-            const SizedBox(height: 32),
+            const SizedBox(height: 18),
+            // Move School Data title closer to card
             const Text('School Data',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             ReorderableWrap(
               spacing: 16,
               runSpacing: 16,
@@ -284,6 +332,22 @@ class _ModernDashboardState extends State<ModernDashboard> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _overviewStat(String label, String value, Color textColor) {
+    final displayValue = value.replaceAll('Total: ', '');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(label,
+            style: TextStyle(
+                color: textColor, fontWeight: FontWeight.w600, fontSize: 18)),
+        const SizedBox(height: 6),
+        Text(displayValue,
+            style: TextStyle(
+                color: textColor, fontWeight: FontWeight.bold, fontSize: 32)),
+      ],
     );
   }
 }

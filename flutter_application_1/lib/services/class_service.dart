@@ -4,8 +4,14 @@ import 'package:http/http.dart' as http;
 import 'cache_service.dart';
 
 class ClassService {
-  Future<List<ParseObject>> fetchClasses() async {
+  Future<List<ParseObject>> fetchClasses({String? schoolId}) async {
     final query = QueryBuilder<ParseObject>(ParseObject('Class'));
+
+    // TODO: Uncomment when multi-tenant system is fully implemented
+    // if (schoolId != null) {
+    //   query.whereEqualTo('school', ParseObject('School')..objectId = schoolId);
+    // }
+
     final response = await query.query();
     if (response.success && response.results != null) {
       return response.results!.cast<ParseObject>();
@@ -13,8 +19,12 @@ class ClassService {
     return [];
   }
 
-  Future<ParseResponse> createClass(String className) async {
+  Future<ParseResponse> createClass(String className,
+      {String? schoolId}) async {
     final newClass = ParseObject('Class')..set('classname', className);
+    if (schoolId != null) {
+      newClass.set('school', ParseObject('School')..objectId = schoolId);
+    }
     return await newClass.save();
   }
 
@@ -31,14 +41,22 @@ class ClassService {
   }
 
   // Fetch class list, using cache if available
-  static Future<List<Map<String, dynamic>>> getClassList() async {
+  static Future<List<Map<String, dynamic>>> getClassList(
+      {String? schoolId}) async {
     // Try to load from cache first
     final cached = CacheService.getClassList();
     if (cached != null && cached.isNotEmpty) {
+      // TODO: Filter cached classes by school when multi-tenant is implemented
       return cached;
     }
     // If cache is empty, fetch from Parse
     final query = QueryBuilder<ParseObject>(ParseObject('Class'));
+
+    // TODO: Uncomment when multi-tenant system is fully implemented
+    // if (schoolId != null) {
+    //   query.whereEqualTo('school', ParseObject('School')..objectId = schoolId);
+    // }
+
     final response = await query.query();
     if (response.success && response.results != null) {
       final classList = response.results!

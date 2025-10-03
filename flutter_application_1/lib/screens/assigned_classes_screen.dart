@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'teacher_schedule_screen.dart';
 
 class AssignedClassesScreen extends StatefulWidget {
   const AssignedClassesScreen({super.key});
@@ -28,6 +29,7 @@ class _AssignedClassesScreenState extends State<AssignedClassesScreen> {
   static const String _cacheTeachersKey = 'cache_teachers';
   static const String _cacheClassesKey = 'cache_classes';
   static const String _cacheAssignmentsKey = 'cache_teacher_assignments';
+  static const String _cacheSchedulesKey = 'cache_teacher_schedules';
 
   // Helper: cache data
   Future<void> _saveCache() async {
@@ -39,6 +41,8 @@ class _AssignedClassesScreenState extends State<AssignedClassesScreen> {
     await prefs.setString(_cacheClassesKey, jsonEncode(allClasses));
     // Cache assignments as JSON
     await prefs.setString(_cacheAssignmentsKey, jsonEncode(teacherAssignments));
+    // Cache schedules as JSON
+    await prefs.setString(_cacheSchedulesKey, jsonEncode(teacherSchedules));
   }
 
   Future<void> _loadCache() async {
@@ -68,6 +72,15 @@ class _AssignedClassesScreenState extends State<AssignedClassesScreen> {
       try {
         final Map<String, dynamic> assignmentsJson = jsonDecode(assignmentsStr);
         teacherAssignments = assignmentsJson.map((k, v) => MapEntry(
+            k, (v as List).map((e) => Map<String, dynamic>.from(e)).toList()));
+      } catch (_) {}
+    }
+    // Schedules
+    final schedulesStr = prefs.getString(_cacheSchedulesKey);
+    if (schedulesStr != null) {
+      try {
+        final Map<String, dynamic> schedulesJson = jsonDecode(schedulesStr);
+        teacherSchedules = schedulesJson.map((k, v) => MapEntry(
             k, (v as List).map((e) => Map<String, dynamic>.from(e)).toList()));
       } catch (_) {}
     }
@@ -267,11 +280,15 @@ class _AssignedClassesScreenState extends State<AssignedClassesScreen> {
                   'teacher', ParseObject('Teacher')..objectId = teacherId)
               ..includeObject(['class', 'subject']);
         final response = await query.query();
+        debugPrint('Schedule query for teacherId: '
+            '${teacherId}, response.success: ${response.success}, results: ${response.results?.length}');
         if (response.success && response.results != null) {
           final assignments = List<ParseObject>.from(response.results!);
           schedules[teacherId] = assignments.map((a) {
             final classObj = a.get<ParseObject>('class');
             final subjectObj = a.get<ParseObject>('subject');
+            debugPrint(
+                'Assignment for teacherId=${teacherId}: class=${classObj?.get<String>('classname')}, subject=${subjectObj?.get<String>('subjectName')}, day=${a.get<String>('dayOfWeek')}');
             return {
               'className': classObj?.get<String>('classname') ?? '',
               'subjectName': subjectObj?.get<String>('subjectName') ?? '',
@@ -586,6 +603,7 @@ class _AssignedClassesScreenState extends State<AssignedClassesScreen> {
               await prefs.remove(_cacheTeachersKey);
               await prefs.remove(_cacheClassesKey);
               await prefs.remove(_cacheAssignmentsKey);
+              await prefs.remove(_cacheSchedulesKey);
               setState(() {
                 teacherList = [];
                 allClasses = [];
@@ -611,83 +629,51 @@ class _AssignedClassesScreenState extends State<AssignedClassesScreen> {
                     final teacher = teacherList[i];
                     final name = teacher.get<String>('fullName') ?? 'Unnamed';
                     final teacherId = teacher.objectId;
-                    final assigned = teacherAssignments[teacherId] ?? [];
                     final schedule = teacherSchedules[teacherId] ?? [];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 10),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.person, color: Colors.blue),
-                                const SizedBox(width: 8),
-                                Text(name,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18)),
-                                const Spacer(),
-                                IconButton(
-                                  icon: const Icon(Icons.add),
-                                  tooltip: 'Assign Classes',
-                                  onPressed: () {
-                                    _showAssignClassAndSubjectDialog(teacher);
-                                  },
-                                ),
-                              ],
+                    debugPrint(
+                        'UI: teacherId=${teacherId}, schedule=${schedule}');
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TeacherScheduleScreen(
+                              teacherId: teacherId ?? '',
+                              teacherName: name,
+                              schedule: schedule,
                             ),
-                            const SizedBox(height: 8),
-                            // Remove assigned classes display for a cleaner look
-                            // Only show schedule if present
-                            if (schedule.isNotEmpty)
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        );
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(vertical: 10),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  const SizedBox(height: 12),
-                                  const Text('Schedule:',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: schedule
-                                        .map((sch) => Card(
-                                              color: Colors.blue[50],
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 8),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                        '${sch['subjectName']} (${sch['className']})',
-                                                        style: const TextStyle(
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold)),
-                                                    Text(
-                                                        '${sch['dayOfWeek']}  ${sch['startTime']} - ${sch['endTime']}'),
-                                                    if ((sch['period'] ?? '')
-                                                        .isNotEmpty)
-                                                      Text(
-                                                          'Period: ${sch['period']}'),
-                                                  ],
-                                                ),
-                                              ),
-                                            ))
-                                        .toList(),
+                                  const Icon(Icons.person, color: Colors.blue),
+                                  const SizedBox(width: 8),
+                                  Text(name,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18)),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.add),
+                                    tooltip: 'Assign Classes',
+                                    onPressed: () {
+                                      _showAssignClassAndSubjectDialog(teacher);
+                                    },
                                   ),
                                 ],
                               ),
-                            if (schedule.isEmpty)
-                              const Text('No schedule assigned',
-                                  style: TextStyle(color: Colors.grey)),
-                          ],
+                              const SizedBox(height: 8),
+                              // Schedule display removed for cleaner look
+                            ],
+                          ),
                         ),
                       ),
                     );

@@ -3,12 +3,13 @@ import '../models/teacher.dart';
 import '../views/teacher_card.dart' as views;
 import 'admin_dashboard.dart';
 import 'settings_screen.dart';
-import 'add_teacher_information_screen.dart';
+import 'teacher_registration_screen.dart';
 import 'student_dashboard.dart';
 import '../services/class_service.dart';
 import '../services/cache_service.dart';
 import 'package:hive/hive.dart';
 import 'dart:typed_data';
+import 'teacher_detail_screen.dart'; // Add import for navigation
 import 'package:http/http.dart' as http;
 
 class TeacherDashboard extends StatefulWidget {
@@ -135,11 +136,23 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                       ratingCount: teacher.ratingCount,
                       hourlyRate: teacher.hourlyRate,
                       imageBytes: teacherImages[teacher.objectId],
+                      onTap: () {
+                        print(
+                            'DEBUG: Teacher card tapped for ${teacher.fullName}');
+                        // Navigate to TeacherDetailScreen instead of showing dialog
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                TeacherDetailScreen(teacher: teacher),
+                          ),
+                        );
+                      },
                       onAdd: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const AddTeacherInformationScreen(),
+                            builder: (_) => const TeacherRegistrationScreen(),
                           ),
                         );
                       },
@@ -151,7 +164,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const AddTeacherInformationScreen(),
+              builder: (_) => const TeacherRegistrationScreen(),
             ),
           );
         },

@@ -3,7 +3,6 @@ import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'package:hive/hive.dart';
 import 'signup_page.dart';
 import '../screens/admin_dashboard.dart';
-import '../screens/teacher_dashboard.dart';
 import '../screens/student_dashboard.dart';
 
 class LoginPage extends StatefulWidget {
@@ -21,9 +20,11 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _checkSessionAndAutoLogin();
+    // Remove auto-login logic since RoleBasedHome handles authentication
   }
 
+  // Auto-login logic removed - RoleBasedHome handles authentication
+  /*
   Future<void> _checkSessionAndAutoLogin() async {
     final box = await Hive.openBox('userSessionBox');
     final sessionToken = box.get('sessionToken');
@@ -37,8 +38,9 @@ class _LoginPageState extends State<LoginPage> {
             MaterialPageRoute(
                 builder: (_) => const AdminDashboard(currentIndex: 0)));
       } else if (role == 'teacher') {
+        // Teachers should also go to AdminDashboard with limited access
         Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const TeacherDashboard()));
+            MaterialPageRoute(builder: (_) => const AdminDashboard(currentIndex: 0)));
       } else {
         Navigator.pushReplacement(
             context,
@@ -47,6 +49,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
   }
+  */
 
   Future<void> loginUser() async {
     final email = emailController.text.trim();
@@ -66,8 +69,11 @@ class _LoginPageState extends State<LoginPage> {
             MaterialPageRoute(
                 builder: (_) => const AdminDashboard(currentIndex: 0)));
       } else if (role == 'teacher') {
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const TeacherDashboard()));
+        // Teachers should also go to AdminDashboard with limited access
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const AdminDashboard(currentIndex: 0)));
       } else {
         Navigator.pushReplacement(
             context,
@@ -104,23 +110,14 @@ class _LoginPageState extends State<LoginPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Colors.blue,
-                  child: Icon(Icons.school, color: Colors.white, size: 32),
-                ),
-                const SizedBox(width: 12),
-                Text('Assalam School',
-                    style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[900])),
-              ],
+            Center(
+              child: Image.asset(
+                'assets/logo.png',
+                width: 120,
+                height: 120,
+              ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(

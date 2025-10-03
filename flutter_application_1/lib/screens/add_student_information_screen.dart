@@ -55,6 +55,10 @@ class _AddStudentInformationScreenState
       ..set('studyStatus', studyStatusController.text.trim())
       ..set('dateOfBirth', dateOfBirth?.toIso8601String())
       ..set('photo', photoUrl ?? '');
+
+    // TODO: Replace with actual school context when multi-tenant system is implemented
+    // For now, this will be null until school selection is implemented
+    // student.set('school', ParseObject('School')..objectId = currentSchoolId);
     final response = await student.save();
     setState(() => loading = false);
     if (response.success) {

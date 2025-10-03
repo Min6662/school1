@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import '../screens/teacher_registration_screen.dart'; // Import for navigation
+import '../screens/teacher_detail_screen.dart'; // Import for teacher detail
+import '../models/teacher.dart'; // Import Teacher model
 
 class TeacherList extends StatefulWidget {
   const TeacherList({super.key});
@@ -104,7 +107,28 @@ class _TeacherListState extends State<TeacherList> {
                                                 BorderRadius.circular(8)),
                                       ),
                                       onPressed: () {
-                                        // TODO: Implement view or edit action
+                                        // Create Teacher model from ParseObject
+                                        final teacherModel = Teacher(
+                                          objectId: teacher.objectId!,
+                                          fullName: name,
+                                          gender: gender,
+                                          subject: subject,
+                                          photoUrl: photoUrl ?? '',
+                                          address:
+                                              teacher.get<String>('Address') ??
+                                                  '',
+                                        );
+
+                                        // Navigate to TeacherDetailScreen
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                TeacherDetailScreen(
+                                              teacher: teacherModel,
+                                            ),
+                                          ),
+                                        );
                                       },
                                       child: const Text('View'),
                                     ),
@@ -115,6 +139,23 @@ class _TeacherListState extends State<TeacherList> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TeacherRegistrationScreen(),
+            ),
+          );
+          // Refresh teacher list if a teacher was created
+          if (result == true) {
+            _fetchTeachers();
+          }
+        },
+        backgroundColor: Colors.blue[900],
+        child: const Icon(Icons.add),
+        tooltip: 'Create Teacher',
       ),
     );
   }

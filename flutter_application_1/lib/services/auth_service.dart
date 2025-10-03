@@ -7,9 +7,13 @@ class AuthService {
   }
 
   Future<ParseResponse> signup(
-      String username, String email, String password, String role) async {
+      String username, String email, String password, String role,
+      {String? schoolId}) async {
     final user = ParseUser.createUser(username, password, email);
     user.set('role', role);
+    if (schoolId != null) {
+      user.set('school', ParseObject('School')..objectId = schoolId);
+    }
     return await user.signUp();
   }
 

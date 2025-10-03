@@ -14,15 +14,40 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController usernameController = TextEditingController();
+  final TextEditingController roleIdController = TextEditingController();
   String selectedRole = 'student';
   String errorMessage = '';
+
+  @override
+  void dispose() {
+    roleIdController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    usernameController.dispose();
+    super.dispose();
+  }
 
   Future<void> signupUser() async {
     final email = emailController.text.trim();
     final password = passwordController.text;
     final username = usernameController.text.trim();
+    final roleId = roleIdController.text.trim();
+
+    if (selectedRole != 'owner' && roleId.isEmpty) {
+      setState(() {
+        errorMessage = 'ID is required for the selected role';
+      });
+      return;
+    }
+
     final user = ParseUser.createUser(username, password, email);
     user.set('role', selectedRole);
+    user.set('roleId', roleId);
+
+    // TODO: Replace with actual school selection when multi-tenant system is implemented
+    // For now, this will be null until school selection is implemented
+    // user.set('school', ParseObject('School')..objectId = selectedSchoolId);
+
     final response = await user.signUp();
     if (response.success) {
       // Cache user session token and info in Hive
@@ -128,6 +153,7 @@ class _SignupPageState extends State<SignupPage> {
                           value: 'teacher', child: Text('Teacher')),
                       DropdownMenuItem(
                           value: 'student', child: Text('Student')),
+                      DropdownMenuItem(value: 'owner', child: Text('Owner')),
                     ],
                     onChanged: (val) {
                       setState(() {
@@ -142,6 +168,24 @@ class _SignupPageState extends State<SignupPage> {
                       fillColor: Colors.grey[100],
                     ),
                   ),
+                  if (selectedRole != 'owner')
+                    Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: roleIdController,
+                          decoration: InputDecoration(
+                            labelText:
+                                '${selectedRole[0].toUpperCase()}${selectedRole.substring(1)} ID',
+                            prefixIcon: const Icon(Icons.badge_outlined),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                          ),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,

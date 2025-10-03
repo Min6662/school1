@@ -44,11 +44,28 @@ class _AddTeacherInformationScreenState
     if (imageFile != null) {
       photoUrl = await _uploadImage(imageFile!);
     }
+
+    final currentUser = await ParseUser.currentUser();
     final teacher = ParseObject('Teacher')
       ..set('fullName', fullNameController.text.trim())
       ..set('gender', gender)
       ..set('subject', subjectController.text.trim())
-      ..set('photo', photoUrl ?? '');
+      ..set('photo', photoUrl ?? '')
+      // Initialize new fields
+      ..set('hasUserAccount', false)
+      ..set('isAccountActive', true)
+      ..set('subjects',
+          [subjectController.text.trim()]) // Convert single subject to array
+      ..set('assignedClasses', []) // Empty array initially
+      ..set('maxClassesPerDay', 6)
+      ..set('availableDays',
+          ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
+      ..set('createdBy', currentUser?.username ?? 'admin')
+      ..set('lastModified', DateTime.now());
+
+    // TODO: Replace with actual school context when multi-tenant system is implemented
+    // For now, this will be null until school selection is implemented
+    // teacher.set('school', ParseObject('School')..objectId = currentSchoolId);
     final response = await teacher.save();
     setState(() => loading = false);
     if (response.success) {

@@ -8,6 +8,8 @@ class Student {
   final DateTime? dateOfBirth;
   final String? photoUrl;
   final String gender;
+  final String? schoolId;
+  final String? schoolName;
 
   Student({
     required this.objectId,
@@ -19,9 +21,20 @@ class Student {
     this.dateOfBirth,
     this.photoUrl,
     required this.gender,
+    this.schoolId,
+    this.schoolName,
   });
 
   factory Student.fromParseObject(Map<String, dynamic> data) {
+    // Extract school information if available
+    String? schoolId;
+    String? schoolName;
+    final schoolData = data['school'];
+    if (schoolData != null && schoolData is Map<String, dynamic>) {
+      schoolId = schoolData['objectId'];
+      schoolName = schoolData['schoolName'];
+    }
+
     return Student(
       objectId: data['objectId'] ?? '',
       name: data['name'] ?? '',
@@ -34,6 +47,8 @@ class Student {
           : null,
       photoUrl: data['photo'],
       gender: data['gender'] ?? '',
+      schoolId: schoolId,
+      schoolName: schoolName,
     );
   }
 }
