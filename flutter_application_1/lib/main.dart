@@ -36,6 +36,7 @@ class MyApp extends StatelessWidget {
       ),
       home: const RoleBasedHome(),
       routes: {
+        '/home': (context) => const RoleBasedHome(),
         '/studentAttendanceHistory': (context) =>
             const StudentAttendanceHistoryScreen(),
         '/studentList': (context) => const StudentDashboard(currentIndex: 2),

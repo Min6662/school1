@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import '../models/teacher.dart';
 import '../views/teacher_card.dart' as views;
-import 'admin_dashboard.dart';
-import 'settings_screen.dart';
 import 'teacher_registration_screen.dart';
-import 'student_dashboard.dart';
 import '../services/class_service.dart';
 import '../services/cache_service.dart';
+import '../widgets/app_bottom_navigation.dart';
 import 'package:hive/hive.dart';
 import 'dart:typed_data';
 import 'teacher_detail_screen.dart'; // Add import for navigation
@@ -20,15 +19,33 @@ class TeacherDashboard extends StatefulWidget {
 }
 
 class _TeacherDashboardState extends State<TeacherDashboard> {
-  bool loading = true;
+  List<Teacher> allTeachers = [];
+  List<Teacher> filteredTeachers = [];
+  bool loading = false;
+  String searchQuery = '';
   String error = '';
-  List<Teacher> teachers = [];
-  Map<String, Uint8List?> teacherImages = {};
+  String? userRole; // Add userRole field
+  Map<String, Uint8List> teacherImages = {}; // Add teacherImages map
 
   @override
   void initState() {
     super.initState();
-    _loadTeachers();
+    _fetchUserRole(); // Fetch user role
+    _loadTeachers(); // Fixed method name
+  }
+
+  Future<void> _fetchUserRole() async {
+    try {
+      final user = await ParseUser.currentUser();
+      final role = user?.get<String>('role');
+      if (mounted) {
+        setState(() {
+          userRole = role;
+        });
+      }
+    } catch (e) {
+      print('Error fetching user role: $e');
+    }
   }
 
   Future<void> _loadTeachers({bool forceRefresh = false}) async {
@@ -38,13 +55,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     });
     try {
       final teacherList = await ClassService.getTeacherList();
-      teachers =
+      allTeachers =
           teacherList.map((data) => Teacher.fromParseObject(data)).toList();
       setState(() {
         loading = false;
       });
       // Load teacher images from cache or network
-      for (final teacher in teachers) {
+      for (final teacher in allTeachers) {
         _getTeacherImage(teacher.objectId, teacher.photoUrl ?? '');
       }
     } catch (e) {
@@ -94,17 +111,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const AdminDashboard(currentIndex: 0),
-              ),
-            );
-          },
-        ),
+        automaticallyImplyLeading: false, // Remove back button
         title: const Text('Teachers', style: TextStyle(color: Colors.black)),
         centerTitle: true,
         actions: [
@@ -125,9 +132,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   child: Text(error, style: const TextStyle(color: Colors.red)))
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: teachers.length,
+                  itemCount: allTeachers.length,
                   itemBuilder: (context, index) {
-                    final teacher = teachers[index];
+                    final teacher = allTeachers[index];
                     return views.TeacherCard(
                       name: teacher.fullName,
                       photoUrl: teacher.photoUrl,
@@ -172,38 +179,10 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         tooltip: 'Add Teacher',
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Teachers'),
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Students'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.settings), label: 'Settings'),
-        ],
-        currentIndex: 1,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const AdminDashboard(currentIndex: 0)));
-          } else if (index == 1) {
-            // Already on Teachers
-          } else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const StudentDashboard(currentIndex: 2),
-              ),
-            );
-          } else if (index == 3) {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()));
-          }
-        },
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
+      bottomNavigationBar: AppBottomNavigation(
+        currentIndex: 1, // Teachers tab
+        userRole: userRole, // Pass userRole for proper access control
+        // Remove onTabChanged to let AppBottomNavigation handle all navigation
       ),
     );
   }

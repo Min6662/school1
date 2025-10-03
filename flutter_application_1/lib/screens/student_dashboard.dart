@@ -1,10 +1,9 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'add_student_information_screen.dart';
-import 'admin_dashboard.dart';
-import 'teacher_dashboard.dart';
-import 'settings_screen.dart';
 import '../services/class_service.dart';
+import '../widgets/app_bottom_navigation.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 
@@ -22,11 +21,27 @@ class _StudentDashboardState extends State<StudentDashboard> {
   bool loading = false;
   String searchQuery = '';
   String error = '';
+  String? userRole; // Add userRole field
 
   @override
   void initState() {
     super.initState();
+    _fetchUserRole(); // Fetch user role
     _loadCachedStudents();
+  }
+
+  Future<void> _fetchUserRole() async {
+    try {
+      final user = await ParseUser.currentUser();
+      final role = user?.get<String>('role');
+      if (mounted) {
+        setState(() {
+          userRole = role;
+        });
+      }
+    } catch (e) {
+      print('Error fetching user role: $e');
+    }
   }
 
   Future<void> _loadCachedStudents() async {
@@ -124,21 +139,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.pop(context);
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AdminDashboard(currentIndex: 0),
-                ),
-              );
-            }
-          },
-        ),
+        automaticallyImplyLeading: false, // Remove back button
         title: const Text('search and find students',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         centerTitle: false,
@@ -225,34 +226,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
         tooltip: 'Add Student',
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Teachers'),
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Students'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.settings), label: 'Settings'),
-        ],
+      bottomNavigationBar: AppBottomNavigation(
         currentIndex: widget.currentIndex,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const AdminDashboard(currentIndex: 0)));
-          } else if (index == 1) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (_) => const TeacherDashboard()));
-          } else if (index == 2) {
-            // Already on StudentDashboard
-          } else if (index == 3) {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()));
-          }
-        },
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
+        userRole: userRole, // Pass userRole for proper access control
+        // Remove onTabChanged to let AppBottomNavigation handle all navigation
       ),
     );
   }
@@ -305,13 +282,31 @@ class TeacherCard extends StatelessWidget {
                       width: 60,
                       height: 60,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 60,
-                        height: 60,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.person,
-                            size: 32, color: Colors.grey),
-                      ),
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        print('Error loading student image: $error');
+                        return Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.person,
+                              size: 32, color: Colors.grey),
+                        );
+                      },
                     ),
             ),
             const SizedBox(width: 12),

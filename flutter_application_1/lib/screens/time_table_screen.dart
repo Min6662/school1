@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import '../widgets/app_bottom_navigation.dart';
 
 class TimeTableScreen extends StatefulWidget {
   final String userRole;
@@ -25,9 +26,12 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
   List<Map<String, dynamic>> classes = [];
   bool isLoadingData = true;
 
+  // User role state
+  String? currentUserRole;
+
   // Helper properties
-  bool get isTeacher => widget.userRole == 'teacher';
-  bool get isAdmin => widget.userRole == 'admin';
+  bool get isTeacher => currentUserRole == 'teacher';
+  bool get isAdmin => currentUserRole == 'admin' || currentUserRole == 'owner';
 
   final List<String> timeSlots = [
     '07:00',
@@ -55,6 +59,10 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Set user role from widget or get from Parse
+    currentUserRole = widget.userRole;
+
     // Initialize empty morning schedule
     for (String time in timeSlots) {
       scheduleData[time] = {};
@@ -75,7 +83,65 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
       selectedTeacher = widget.teacherId;
     }
 
+    _initializeUserRole();
     _loadData();
+  }
+
+  Future<void> _initializeUserRole() async {
+    if (currentUserRole == null) {
+      // Get user role from Parse if not provided
+      final currentUser = await ParseUser.currentUser() as ParseUser?;
+      if (currentUser != null) {
+        setState(() {
+          currentUserRole = currentUser.get<String>('role') ?? 'student';
+        });
+        print('DEBUG: Set currentUserRole to: $currentUserRole');
+      }
+    }
+
+    // If user is a teacher, find their teacher ID
+    if (isTeacher && widget.teacherId == null) {
+      print('DEBUG: User is teacher, finding teacher ID...');
+      await _findTeacherId();
+    } else if (isTeacher && widget.teacherId != null) {
+      print('DEBUG: Teacher ID already provided: ${widget.teacherId}');
+      setState(() {
+        selectedTeacher = widget.teacherId;
+      });
+      // Load schedule data for provided teacher ID
+      await _loadScheduleData();
+    }
+  }
+
+  Future<void> _findTeacherId() async {
+    try {
+      final currentUser = await ParseUser.currentUser() as ParseUser?;
+      if (currentUser != null) {
+        final username = currentUser.username;
+
+        // Find teacher record by username
+        final query = QueryBuilder<ParseObject>(ParseObject('Teacher'))
+          ..whereEqualTo('username', username);
+
+        final response = await query.query();
+        if (response.success &&
+            response.results != null &&
+            response.results!.isNotEmpty) {
+          setState(() {
+            selectedTeacher = response.results!.first.objectId;
+          });
+          print(
+              'DEBUG: Found teacher ID: $selectedTeacher for user: $username');
+
+          // Load schedule data after finding teacher ID
+          await _loadScheduleData();
+        } else {
+          print('DEBUG: No teacher record found for username: $username');
+        }
+      }
+    } catch (e) {
+      print('Error finding teacher ID: $e');
+    }
   }
 
   Future<void> _loadData() async {
@@ -86,6 +152,12 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
     setState(() {
       isLoadingData = false;
     });
+
+    // For teachers, load schedule data after all data is loaded
+    if (isTeacher && selectedTeacher != null) {
+      print('DEBUG: Loading schedule data for teacher after data load');
+      await _loadScheduleData();
+    }
   }
 
   Future<void> _loadTeachers() async {
@@ -147,33 +219,36 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
 
     if (selectedTeacher == null && selectedClass == null) {
       // No selection, keep empty schedule
+      print('DEBUG: No teacher or class selected, keeping empty schedule');
       return;
     }
+
+    print(
+        'DEBUG: _loadScheduleData called - isTeacher: $isTeacher, selectedTeacher: $selectedTeacher, selectedClass: $selectedClass');
 
     try {
       print(
           'Loading schedule data - Teacher: $selectedTeacher, Class: $selectedClass');
 
       final query = QueryBuilder<ParseObject>(ParseObject('Schedule'));
+      // Include teacher and class data in the query
+      query.includeObject(['teacher', 'class']);
 
-      // If both teacher and class are selected, show schedules for that specific combination
-      // If only one is selected, show all schedules for that teacher or class
-      if (selectedTeacher != null && selectedClass != null) {
-        print('Loading schedule for specific teacher-class combination');
-        final teacherPointer = ParseObject('Teacher')
-          ..objectId = selectedTeacher;
+      // Priority logic: If class is selected, show ALL subjects for that class
+      // If only teacher is selected, show subjects for that teacher
+      if (selectedClass != null) {
+        print(
+            'Loading ALL schedules for class: $selectedClass (priority mode)');
         final classPointer = ParseObject('Class')..objectId = selectedClass;
-        query.whereEqualTo('teacher', teacherPointer);
         query.whereEqualTo('class', classPointer);
+
+        // If teacher is also selected, we'll still show all class subjects
+        // but can highlight the current teacher's subjects differently
       } else if (selectedTeacher != null) {
-        print('Loading all schedules for teacher: $selectedTeacher');
+        print('Loading schedules for teacher only: $selectedTeacher');
         final teacherPointer = ParseObject('Teacher')
           ..objectId = selectedTeacher;
         query.whereEqualTo('teacher', teacherPointer);
-      } else if (selectedClass != null) {
-        print('Loading all schedules for class: $selectedClass');
-        final classPointer = ParseObject('Class')..objectId = selectedClass;
-        query.whereEqualTo('class', classPointer);
       }
 
       final response = await query.query();
@@ -187,16 +262,42 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
           final timeSlot = schedule.get<String>('timeSlot') ?? '';
           final subject = schedule.get<String>('subject') ?? '';
 
-          print('Loading schedule entry: $day $timeSlot - $subject');
+          // Get teacher and class information
+          final teacherPointer = schedule.get<ParseObject>('teacher');
+          final classPointer = schedule.get<ParseObject>('class');
 
-          String displayText = subject;
+          final teacherName =
+              teacherPointer?.get<String>('fullName') ?? 'Unknown Teacher';
+          final className =
+              classPointer?.get<String>('classname') ?? 'Unknown Class';
 
-          // For teachers, combine subject with class name
-          if (isTeacher) {
-            final classPointer = schedule.get<ParseObject>('class');
-            if (classPointer != null) {
-              final className = classPointer.get<String>('classname') ?? '';
+          print(
+              'Loading schedule entry: $day $timeSlot - $subject by $teacherName for $className');
+
+          String displayText;
+
+          // Format display text based on view mode and user role
+          if (selectedClass != null && selectedTeacher != null) {
+            // Both selected - show if this entry matches current teacher
+            if (teacherPointer?.objectId == selectedTeacher) {
+              displayText = subject; // Current teacher's subject
+            } else {
+              // Get first name only (split by space and take first part)
+              String firstName = teacherName.split(' ').first.toLowerCase();
+              displayText =
+                  '$subject\n$firstName'; // Other teacher's subject with first name
+            }
+          } else if (selectedClass != null) {
+            // Class selected - show all subjects with teacher names
+            // Get first name only (split by space and take first part)
+            String firstName = teacherName.split(' ').first.toLowerCase();
+            displayText = '$subject\n$firstName';
+          } else {
+            // Teacher only selected
+            if (isTeacher) {
               displayText = '$subject\n$className';
+            } else {
+              displayText = subject;
             }
           }
 
@@ -410,6 +511,62 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
     }
   }
 
+  Widget _buildScheduleText(String text, bool isEmpty,
+      {bool isAfternoon = false}) {
+    if (text.isEmpty) {
+      return Text('');
+    }
+
+    // Choose colors based on morning/afternoon
+    Color primaryColor = isAfternoon ? Colors.orange[900]! : Colors.blue[900]!;
+    Color greyColor = Colors.grey[600]!;
+
+    // Check if text contains a teacher name (has newline)
+    if (text.contains('\n')) {
+      final parts = text.split('\n');
+      final subject = parts[0];
+      final teacherName = parts.length > 1 ? parts[1] : '';
+
+      return RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: subject,
+              style: TextStyle(
+                fontSize: 11,
+                color: primaryColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (teacherName.isNotEmpty)
+              TextSpan(
+                text: '\n$teacherName',
+                style: TextStyle(
+                  fontSize: 8, // Smaller font for teacher name
+                  color: greyColor,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+          ],
+        ),
+      );
+    } else {
+      // Single line text (no teacher name)
+      return Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          color: isEmpty ? greyColor : primaryColor,
+          fontWeight: isEmpty ? FontWeight.normal : FontWeight.w600,
+        ),
+        textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+  }
+
   void _showSubjectDialog(String day, String timeSlot) {
     // Determine which schedule this time slot belongs to
     String currentValue;
@@ -419,16 +576,26 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
       currentValue = afternoonScheduleData[timeSlot]![day] ?? '';
     }
 
-    final controller = TextEditingController(text: currentValue);
+    // Extract just the subject name for editing (remove teacher info)
+    String subjectOnly = currentValue.split('\n').first;
+    final controller = TextEditingController(text: subjectOnly);
+
+    // Check if this slot has an entry by another teacher
+    // If there's a newline with a teacher name, it's from another teacher
+    bool hasOtherTeacherEntry = currentValue.contains('\n') &&
+        currentValue.split('\n').length > 1 &&
+        selectedTeacher != null &&
+        selectedClass != null;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Text('$day - $timeSlot'),
+            Expanded(
+              child: Text('$day - $timeSlot'),
+            ),
             if (isTeacher) ...[
-              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -444,17 +611,81 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
                   ),
                 ),
               ),
+            ] else if (hasOtherTeacherEntry) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'OTHER TEACHER',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+              ),
             ],
           ],
         ),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter subject name',
-            border: OutlineInputBorder(),
-          ),
-          enabled: isAdmin, // Only enabled for admin
-          readOnly: isTeacher, // Read-only for teachers
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (currentValue.isNotEmpty && hasOtherTeacherEntry) ...[
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Current Assignment:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      currentValue,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Edit will overwrite the current assignment:',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.orange,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: selectedClass != null
+                    ? 'Enter subject name for selected class'
+                    : 'Enter subject name',
+                border: const OutlineInputBorder(),
+                helperText: selectedClass != null
+                    ? 'This will be assigned to the selected class'
+                    : null,
+              ),
+              enabled: isAdmin, // Only enabled for admin
+              readOnly: isTeacher, // Read-only for teachers
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -467,7 +698,7 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
                 Navigator.pop(context);
                 await _saveScheduleEntry(day, timeSlot, controller.text.trim());
               },
-              child: const Text('Save'),
+              child: Text(hasOtherTeacherEntry ? 'Overwrite' : 'Save'),
             ),
             if (currentValue.isNotEmpty)
               TextButton(
@@ -498,6 +729,7 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
         backgroundColor: Colors.blue[900],
         foregroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // Remove back button
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -888,26 +1120,11 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
                                                           : Colors.transparent,
                                                 ),
                                                 child: Center(
-                                                  child: Text(
+                                                  child: _buildScheduleText(
                                                     scheduleData[time]![day] ??
                                                         '',
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: scheduleData[
-                                                                  time]![day]!
-                                                              .isNotEmpty
-                                                          ? Colors.blue[900]
-                                                          : Colors.grey[600],
-                                                      fontWeight: scheduleData[
-                                                                  time]![day]!
-                                                              .isNotEmpty
-                                                          ? FontWeight.w600
-                                                          : FontWeight.normal,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                    maxLines: 2,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
+                                                    scheduleData[time]![day]!
+                                                        .isEmpty,
                                                   ),
                                                 ),
                                               ),
@@ -1076,34 +1293,14 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
                                                       : Colors.transparent,
                                                 ),
                                                 child: Center(
-                                                  child: Text(
+                                                  child: _buildScheduleText(
                                                     afternoonScheduleData[
                                                             time]![day] ??
                                                         '',
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color:
-                                                          afternoonScheduleData[
-                                                                          time]![
-                                                                      day]!
-                                                                  .isNotEmpty
-                                                              ? Colors
-                                                                  .orange[900]
-                                                              : Colors
-                                                                  .grey[600],
-                                                      fontWeight:
-                                                          afternoonScheduleData[
-                                                                          time]![
-                                                                      day]!
-                                                                  .isNotEmpty
-                                                              ? FontWeight.w600
-                                                              : FontWeight
-                                                                  .normal,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                    maxLines: 2,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
+                                                    afternoonScheduleData[
+                                                            time]![day]!
+                                                        .isEmpty,
+                                                    isAfternoon: true,
                                                   ),
                                                 ),
                                               ),
@@ -1205,6 +1402,10 @@ class _TimeTableScreenState extends State<TimeTableScreen> {
             ],
           ],
         ),
+      ),
+      bottomNavigationBar: AppBottomNavigation(
+        currentIndex: 1, // Schedule/Teachers tab
+        userRole: currentUserRole,
       ),
     );
   }

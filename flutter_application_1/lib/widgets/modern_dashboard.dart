@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:reorderables/reorderables.dart';
+import '../widgets/app_bottom_navigation.dart';
 
 import '../screens/assigned_classes_screen.dart'; // Import the new screen
 import '../screens/time_table_screen.dart';
@@ -116,18 +117,24 @@ class _ModernDashboardState extends State<ModernDashboard> {
           );
         },
       },
-      {
-        'icon': Icons.schedule,
-        'title': 'Timetable',
-        'description': 'Schedule',
-        'onTap': () {
-          Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(
-              builder: (_) => const TimeTableScreen(),
-            ),
-          );
+      // Only show Timetable card if user is not a teacher
+      if (widget.userRole?.toLowerCase() != 'teacher')
+        {
+          'icon': Icons.schedule,
+          'title': 'Timetable',
+          'description': 'Schedule',
+          'onTap': () {
+            Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(
+                builder: (_) => TimeTableScreen(
+                  userRole: widget.userRole ?? 'admin',
+                  // teacherId will be automatically found by the TimeTableScreen
+                  // for teacher users in the _findTeacherId method
+                ),
+              ),
+            );
+          },
         },
-      },
     ];
 
     // Debug print final card count
@@ -156,6 +163,7 @@ class _ModernDashboardState extends State<ModernDashboard> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // Remove back button
         title: Row(
           children: [
             const CircleAvatar(
@@ -272,19 +280,19 @@ class _ModernDashboardState extends State<ModernDashboard> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Teachers'),
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Students'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.settings), label: 'Settings'),
-        ],
+      bottomNavigationBar: AppBottomNavigation(
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
+        userRole: widget.userRole,
+        onTabChanged: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+          if (widget.onTabSelected != null) {
+            widget.onTabSelected!(index);
+          }
+          // The AppBottomNavigation will now handle navigation automatically
+          // No need for manual navigation here anymore
+        },
       ),
     );
   }

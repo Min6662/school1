@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import '../widgets/modern_dashboard.dart';
 import 'settings_screen.dart';
-import 'teacher_dashboard.dart';
 import 'student_dashboard.dart';
 import '../views/class_list.dart';
 import '../screens/assign_student_to_class_screen.dart';
@@ -176,10 +175,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           width: 112,
                           height: 112,
                           child: (photoUrl != null && photoUrl.isNotEmpty)
-                              ? Image.network(photoUrl, fit: BoxFit.cover)
-                              : Image.network(
-                                  'https://randomuser.me/api/portraits/men/1.jpg',
-                                  fit: BoxFit.cover),
+                              ? Image.network(
+                                  photoUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey[300],
+                                      child: const Icon(
+                                        Icons.person,
+                                        size: 40,
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
+                                )
+                              : Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(
+                                    Icons.person,
+                                    size: 40,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -269,18 +286,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               MaterialPageRoute(
                   builder: (_) => const AdminDashboard(currentIndex: 0)));
         } else if (index == 1) {
-          // Only admins can access Teacher management
-          if (userRole?.toLowerCase() == 'admin' ||
-              userRole?.toLowerCase() == 'owner') {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (_) => const TeacherDashboard()));
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text(
-                      'Access denied: Teachers cannot manage other teachers')),
-            );
-          }
+          // Navigation handled by AppBottomNavigation widget
+          // No need for additional access control here
+          print('DEBUG: Tab 1 selected - delegating to AppBottomNavigation');
         } else if (index == 2) {
           Navigator.pushReplacement(
               context,

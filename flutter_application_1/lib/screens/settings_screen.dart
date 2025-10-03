@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import '../services/class_service.dart';
 import '../services/cache_service.dart';
+import '../widgets/app_bottom_navigation.dart';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:hive/hive.dart';
@@ -21,6 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? photoUrl;
   Uint8List? photoBytes;
   String? role;
+  String? userRole; // Add userRole field for bottom navigation
   bool loading = true;
   String error = '';
   String? userCacheKey;
@@ -30,6 +32,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _loadSettingsInstant();
     _fetchUserInfo();
+    _fetchUserRole(); // Add user role fetching
+  }
+
+  Future<void> _fetchUserRole() async {
+    try {
+      final user = await ParseUser.currentUser();
+      final fetchedRole = user?.get<String>('role');
+      if (mounted) {
+        setState(() {
+          userRole = fetchedRole;
+        });
+      }
+    } catch (e) {
+      print('Error fetching user role: $e');
+    }
   }
 
   void _loadSettingsInstant() {
@@ -104,6 +121,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         elevation: 0,
         title: const Text('Settings', style: TextStyle(color: Colors.black)),
         centerTitle: true,
+        automaticallyImplyLeading:
+            false, // This removes the back button completely
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -149,6 +168,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _settingsTile(Icons.logout, 'Logout'),
                   ],
                 ),
+      // Add bottom navigation with Settings selected (index 3)
+      bottomNavigationBar: AppBottomNavigation(
+        currentIndex: 3, // Settings tab
+        userRole: userRole, // Pass userRole for proper access control
+      ),
     );
   }
 
